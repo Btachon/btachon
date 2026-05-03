@@ -15,11 +15,33 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
+async function startServer(port: number, retries = 10, delayMs = 1000) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    await new Promise<void>((resolve, reject) => {
+      const server = app.listen(port, (err?: Error) => {
+        if (err) { reject(err); return; }
+        logger.info({ port }, "Server listening");
+        resolve();
+      });
+      server.on("error", (err: NodeJS.ErrnoException) => {
+        if (err.code === "EADDRINUSE" && attempt < retries) {
+          logger.warn({ port, attempt }, "Port in use, retrying...");
+          server.close();
+          reject(err);
+        } else {
+          logger.error({ err }, "Error listening on port");
+          process.exit(1);
+        }
+      });
+    }).catch(async (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE") {
+        await new Promise(r => setTimeout(r, delayMs));
+      }
+    });
 
-  logger.info({ port }, "Server listening");
-});
+    // If we got here without process.exit, the server is up
+    return;
+  }
+}
+
+startServer(port);

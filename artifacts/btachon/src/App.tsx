@@ -49,7 +49,7 @@ function AppGate() {
 
   const { data: profile, isLoading: profileLoading } = useGetProfile({
     query: {
-      enabled: !!user,
+      enabled: !!user && welcomeSeen,
       retry: false,
       queryKey: getGetProfileQueryKey(),
     },
@@ -80,9 +80,8 @@ function AppGate() {
     qc.invalidateQueries({ queryKey: getGetProfileQueryKey() });
   };
 
-  const isLoading = authLoading || (!!user && profileLoading);
-
-  if (isLoading) {
+  // 1. Block on auth loading only
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-3">
@@ -93,20 +92,10 @@ function AppGate() {
     );
   }
 
+  // 2. Not logged in → Login
   if (!user) return <Login onLogin={login} />;
 
-  if (profile && !profile.onboardingComplete) {
-    return <Onboarding onComplete={handleOnboardingComplete} />;
-  }
-
-  if (!profile) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
+  // 3. Logged in but hasn't seen welcome → show Welcome (Ben Adam L screen) immediately
   if (!welcomeSeen) {
     return (
       <Welcome
@@ -118,6 +107,30 @@ function AppGate() {
     );
   }
 
+  // 4. Welcome seen — now load profile
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // 5. Profile loaded but onboarding not complete → Onboarding
+  if (profile && !profile.onboardingComplete) {
+    return <Onboarding onComplete={handleOnboardingComplete} />;
+  }
+
+  // 6. No profile yet (safety net)
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // 7. All good → Main app
   return (
     <Layout>
       <AppRoutes />

@@ -1,6 +1,6 @@
 {
   "installCommand": "pnpm install",
-  "buildCommand": "pnpm run typecheck:libs && pnpm --filter @workspace/btachon run build",
-  "outputDirectory": "artifacts/btachon/dist",
+  "buildCommand": "pnpm run typecheck:libs && VITE_DEMO_MODE=true pnpm --filter @workspace/btachon run build",
+  "outputDirectory": "artifacts/btachon/dist/public",
   "framework": null
 }

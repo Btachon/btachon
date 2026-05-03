@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Layout } from "./components/Layout";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
@@ -21,15 +21,72 @@ import Tefillah from "@/pages/tefillah";
 import Welcome from "@/pages/welcome";
 
 const queryClient = new QueryClient();
-
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
 const WELCOME_KEY = "btachon:welcome:seen:v1";
 
-function AppGate() {
+// ─── All app routes ────────────────────────────────────────────────────────────
+function AppRoutes() {
+  return (
+    <Switch>
+      <Route path="/" component={Dashboard} />
+      <Route path="/pulse" component={Pulse} />
+      <Route path="/learn" component={Learn} />
+      <Route path="/grow" component={Grow} />
+      <Route path="/blocker" component={Blocker} />
+      <Route path="/chevre" component={Chevre} />
+      <Route path="/settings" component={Settings} />
+      <Route path="/tefillah" component={Tefillah} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+// ─── Demo mode (Vercel / no backend) ──────────────────────────────────────────
+function DemoApp() {
+  const [welcomeSeen, setWelcomeSeen] = useState(
+    () => localStorage.getItem(WELCOME_KEY) === "1"
+  );
+
+  if (!welcomeSeen) {
+    return (
+      <Welcome
+        onEnter={() => {
+          localStorage.setItem(WELCOME_KEY, "1");
+          setWelcomeSeen(true);
+        }}
+      />
+    );
+  }
+
+  return (
+    <>
+      {/* Demo banner */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-primary/90 text-primary-foreground text-xs text-center py-1.5 px-4">
+        Demo mode — some features require sign-in.{" "}
+        <a
+          href="https://discipline-nexus--pearlysabel.replit.app"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline font-semibold hover:opacity-80"
+        >
+          Open full app
+        </a>
+      </div>
+      <div className="pt-7">
+        <Layout>
+          <AppRoutes />
+        </Layout>
+      </div>
+    </>
+  );
+}
+
+// ─── Full authenticated app ────────────────────────────────────────────────────
+function AuthApp() {
   const { user, isLoading: authLoading, login } = useAuth();
   const qc = useQueryClient();
-  const [welcomeSeen, setWelcomeSeen] = useState<boolean>(
+  const [welcomeSeen, setWelcomeSeen] = useState(
     () => localStorage.getItem(WELCOME_KEY) === "1"
   );
 
@@ -61,20 +118,9 @@ function AppGate() {
         onboardingComplete: true,
       },
     });
-
-    if (data.shabbosCity) {
-      localStorage.setItem("btachon:shabbosLocation", data.shabbosCity);
-    }
-    if (data.profileType) {
-      localStorage.setItem("btachon:profileType", data.profileType);
-    }
-
+    if (data.shabbosCity) localStorage.setItem("btachon:shabbosLocation", data.shabbosCity);
+    if (data.profileType) localStorage.setItem("btachon:profileType", data.profileType);
     qc.invalidateQueries({ queryKey: getGetProfileQueryKey() });
-  };
-
-  const handleWelcomeEnter = () => {
-    localStorage.setItem(WELCOME_KEY, "1");
-    setWelcomeSeen(true);
   };
 
   const isLoading = authLoading || (!!user && profileLoading);
@@ -90,9 +136,7 @@ function AppGate() {
     );
   }
 
-  if (!user) {
-    return <Login onLogin={login} />;
-  }
+  if (!user) return <Login onLogin={login} />;
 
   if (profile && !profile.onboardingComplete) {
     return <Onboarding onComplete={handleOnboardingComplete} />;
@@ -107,24 +151,26 @@ function AppGate() {
   }
 
   if (!welcomeSeen) {
-    return <Welcome onEnter={handleWelcomeEnter} />;
+    return (
+      <Welcome
+        onEnter={() => {
+          localStorage.setItem(WELCOME_KEY, "1");
+          setWelcomeSeen(true);
+        }}
+      />
+    );
   }
 
   return (
     <Layout>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/pulse" component={Pulse} />
-        <Route path="/learn" component={Learn} />
-        <Route path="/grow" component={Grow} />
-        <Route path="/blocker" component={Blocker} />
-        <Route path="/chevre" component={Chevre} />
-        <Route path="/settings" component={Settings} />
-        <Route path="/tefillah" component={Tefillah} />
-        <Route component={NotFound} />
-      </Switch>
+      <AppRoutes />
     </Layout>
   );
+}
+
+// ─── Root ──────────────────────────────────────────────────────────────────────
+function AppGate() {
+  return DEMO_MODE ? <DemoApp /> : <AuthApp />;
 }
 
 function App() {

@@ -4,9 +4,7 @@ import { logger } from "./lib/logger";
 const rawPort = process.env["PORT"];
 
 if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
+  throw new Error("PORT environment variable is required but was not provided.");
 }
 
 const port = Number(rawPort);
@@ -18,11 +16,14 @@ if (Number.isNaN(port) || port <= 0) {
 async function startServer(port: number, retries = 15, delayMs = 1500) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     const started = await new Promise<boolean>((resolve) => {
-      const server = app.listen(port, () => {
+      const server = app.listen(port);
+
+      server.once("listening", () => {
         logger.info({ port }, "Server listening");
         resolve(true);
       });
-      server.on("error", (err: NodeJS.ErrnoException) => {
+
+      server.once("error", (err: NodeJS.ErrnoException) => {
         if (err.code === "EADDRINUSE") {
           logger.warn({ port, attempt }, "Port in use, retrying...");
           server.close(() => resolve(false));

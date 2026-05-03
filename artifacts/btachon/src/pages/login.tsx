@@ -75,7 +75,8 @@ export default function Login({ onLogin }: LoginProps) {
       const apiUrl = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, "");
       if (apiUrl) setBaseUrl(apiUrl);
       setAuthTokenGetter(getStoredJwt);
-      onLogin();
+      // Reload so useAuth re-initialises and picks up the stored JWT
+      window.location.href = window.location.origin + window.location.pathname;
     } catch {
       setError("Could not reach the server. Please check your connection.");
     } finally {

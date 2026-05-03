@@ -1,7 +1,30 @@
 import { useState, useEffect, useCallback } from "react";
 import type { AuthUser } from "@workspace/api-client-react";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 export type { AuthUser };
+
+const JWT_KEY = "btachon:jwt";
+
+export function getStoredJwt(): string | null {
+  try {
+    return localStorage.getItem(JWT_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function storeJwt(token: string) {
+  try {
+    localStorage.setItem(JWT_KEY, token);
+  } catch {}
+}
+
+export function clearJwt() {
+  try {
+    localStorage.removeItem(JWT_KEY);
+  } catch {}
+}
 
 interface AuthState {
   user: AuthUser | null;
@@ -22,21 +45,49 @@ export function useAuth(): AuthState {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    let cancelled = false;
+    // Wire up the JWT getter for all API calls
+    setAuthTokenGetter(getStoredJwt);
 
-    fetch("/api/auth/user", { credentials: "include" })
+    // Extract ?token= from URL if present (post-Google-OAuth redirect)
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get("token");
+    if (urlToken) {
+      storeJwt(urlToken);
+      params.delete("token");
+      params.delete("auth_error");
+      const newSearch = params.toString();
+      const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : "") + window.location.hash;
+      window.history.replaceState({}, "", newUrl);
+    }
+
+    const token = urlToken ?? getStoredJwt();
+
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    fetch("/api/auth/user", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json() as Promise<{ user: AuthUser | null }>;
       })
       .then((data) => {
         if (!cancelled) {
-          setUser(data.user ?? null);
+          if (data.user) {
+            setUser(data.user);
+          } else {
+            clearJwt();
+          }
           setIsLoading(false);
         }
       })
       .catch(() => {
         if (!cancelled) {
+          clearJwt();
           setUser(null);
           setIsLoading(false);
         }
@@ -49,11 +100,14 @@ export function useAuth(): AuthState {
 
   const login = useCallback(() => {
     const base = getBasePath();
-    window.location.href = `/api/login?returnTo=${encodeURIComponent(base)}`;
+    window.location.href = `/api/auth/google?returnTo=${encodeURIComponent(base)}`;
   }, []);
 
   const logout = useCallback(() => {
-    window.location.href = "/api/logout";
+    clearJwt();
+    setUser(null);
+    fetch("/api/logout", { method: "POST" }).catch(() => {});
+    window.location.href = "/";
   }, []);
 
   return {

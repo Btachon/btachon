@@ -22,10 +22,8 @@ import Welcome from "@/pages/welcome";
 
 const queryClient = new QueryClient();
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
 const WELCOME_KEY = "btachon:welcome:seen:v1";
 
-// ─── All app routes ────────────────────────────────────────────────────────────
 function AppRoutes() {
   return (
     <Switch>
@@ -42,48 +40,7 @@ function AppRoutes() {
   );
 }
 
-// ─── Demo mode (Vercel / no backend) ──────────────────────────────────────────
-function DemoApp() {
-  const [welcomeSeen, setWelcomeSeen] = useState(
-    () => localStorage.getItem(WELCOME_KEY) === "1"
-  );
-
-  if (!welcomeSeen) {
-    return (
-      <Welcome
-        onEnter={() => {
-          localStorage.setItem(WELCOME_KEY, "1");
-          setWelcomeSeen(true);
-        }}
-      />
-    );
-  }
-
-  return (
-    <>
-      {/* Demo banner */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-primary/90 text-primary-foreground text-xs text-center py-1.5 px-4">
-        Demo mode — some features require sign-in.{" "}
-        <a
-          href="https://discipline-nexus--pearlysabel.replit.app"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline font-semibold hover:opacity-80"
-        >
-          Open full app
-        </a>
-      </div>
-      <div className="pt-7">
-        <Layout>
-          <AppRoutes />
-        </Layout>
-      </div>
-    </>
-  );
-}
-
-// ─── Full authenticated app ────────────────────────────────────────────────────
-function AuthApp() {
+function AppGate() {
   const { user, isLoading: authLoading, login } = useAuth();
   const qc = useQueryClient();
   const [welcomeSeen, setWelcomeSeen] = useState(
@@ -166,11 +123,6 @@ function AuthApp() {
       <AppRoutes />
     </Layout>
   );
-}
-
-// ─── Root ──────────────────────────────────────────────────────────────────────
-function AppGate() {
-  return DEMO_MODE ? <DemoApp /> : <AuthApp />;
 }
 
 function App() {

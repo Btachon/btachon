@@ -75,8 +75,8 @@ function AppGate() {
         onboardingComplete: true,
       },
     });
-    if (data.shabbosCity) localStorage.setItem("btachon:shabbosLocation", data.shabbosCity);
-    if (data.profileType) localStorage.setItem("btachon:profileType", data.profileType);
+    if (data.shabbosCity) localStorage.setItem("btachon:shabbosLocation", JSON.stringify(data.shabbosCity));
+    if (data.profileType) localStorage.setItem("btachon:profileType", JSON.stringify(data.profileType));
     qc.invalidateQueries({ queryKey: getGetProfileQueryKey() });
   };
 

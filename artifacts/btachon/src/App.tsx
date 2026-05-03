@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Layout } from "./components/Layout";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
@@ -18,14 +18,20 @@ import Settings from "@/pages/settings";
 import Login from "@/pages/login";
 import Onboarding from "@/pages/onboarding";
 import Tefillah from "@/pages/tefillah";
+import Welcome from "@/pages/welcome";
 
 const queryClient = new QueryClient();
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
+const WELCOME_KEY = "btachon:welcome:seen:v1";
+
 function AppGate() {
   const { user, isLoading: authLoading, login } = useAuth();
   const qc = useQueryClient();
+  const [welcomeSeen, setWelcomeSeen] = useState<boolean>(
+    () => localStorage.getItem(WELCOME_KEY) === "1"
+  );
 
   const { data: profile, isLoading: profileLoading } = useGetProfile({
     query: {
@@ -56,16 +62,19 @@ function AppGate() {
       },
     });
 
-    // Mirror shabbos city to localStorage for the Shabbos hook
     if (data.shabbosCity) {
       localStorage.setItem("btachon:shabbosLocation", data.shabbosCity);
     }
-    // Save profile type for personalization
     if (data.profileType) {
       localStorage.setItem("btachon:profileType", data.profileType);
     }
 
     qc.invalidateQueries({ queryKey: getGetProfileQueryKey() });
+  };
+
+  const handleWelcomeEnter = () => {
+    localStorage.setItem(WELCOME_KEY, "1");
+    setWelcomeSeen(true);
   };
 
   const isLoading = authLoading || (!!user && profileLoading);
@@ -89,13 +98,16 @@ function AppGate() {
     return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
-  // profile is null means still loading or error — show spinner
   if (!profile) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
+  }
+
+  if (!welcomeSeen) {
+    return <Welcome onEnter={handleWelcomeEnter} />;
   }
 
   return (

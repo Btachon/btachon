@@ -168,9 +168,16 @@ router.post("/auth/login", async (req: Request, res: Response) => {
 
 // ─── Google OAuth ──────────────────────────────────────────────────────────────
 
+function getGoogleCallbackUrl(req: Request): string {
+  return (
+    process.env.GOOGLE_CALLBACK_URL ??
+    `${getOrigin(req)}/api/auth/google/callback`
+  );
+}
+
 router.get("/auth/google", (req: Request, res: Response) => {
   const state = crypto.randomBytes(16).toString("hex");
-  const callbackUrl = `${getOrigin(req)}/api/auth/google/callback`;
+  const callbackUrl = getGoogleCallbackUrl(req);
   setStateCookie(res, state);
   res.redirect(buildGoogleAuthUrl(callbackUrl, state));
 });
@@ -192,7 +199,7 @@ router.get("/auth/google/callback", async (req: Request, res: Response) => {
   }
 
   try {
-    const callbackUrl = `${getOrigin(req)}/api/auth/google/callback`;
+    const callbackUrl = getGoogleCallbackUrl(req);
     const googleUser = await exchangeGoogleCode(code, callbackUrl);
     const dbUser = await upsertGoogleUser(googleUser);
 

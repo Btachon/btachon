@@ -1,0 +1,11 @@
+[build]
+  command = "pnpm install && BASE_PATH=/ VITE_API_URL=https://discipline-nexus--pearlysabel.replit.app pnpm --filter @workspace/btachon run build"
+  publish = "artifacts/btachon/dist/public"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

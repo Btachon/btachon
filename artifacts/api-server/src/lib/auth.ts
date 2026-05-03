@@ -122,5 +122,13 @@ export async function exchangeGoogleCode(
 
   if (!userRes.ok) throw new Error("Failed to fetch Google user info");
 
-  return userRes.json() as Promise<{ sub: string; email: string; name: string; given_name?: string; family_name?: string; picture?: string }>;
+  const userData = await userRes.json() as { id?: string; sub?: string; email: string; name: string; given_name?: string; family_name?: string; picture?: string };
+  return {
+    sub: userData.sub ?? userData.id ?? "",
+    email: userData.email,
+    name: userData.name,
+    given_name: userData.given_name,
+    family_name: userData.family_name,
+    picture: userData.picture,
+  };
 }

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import {
   Shield, ArrowRight, LockOpen, Dumbbell, BookOpen,
-  Sparkles, Moon, Power, Check, X, ShieldAlert
+  Sparkles, Moon, Power, Check, X, ShieldAlert, Smartphone, Monitor, ExternalLink
 } from "lucide-react";
 import { useShabbos } from "@/hooks/useShabbos";
 import { formatTimeInTz } from "@/lib/shabbos";
@@ -191,6 +191,75 @@ export default function Blocker() {
             <p className="text-sm text-destructive mt-3 font-medium">Select at least one gateway.</p>
           )}
         </div>
+
+        {/* Device-level blocking */}
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Device-Level Blocking</p>
+          <p className="text-sm text-muted-foreground mb-4">
+            For true enforcement, set up blocking at the OS level. These tools work even when Btachon is closed.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+
+            {/* iOS */}
+            <a
+              href="https://support.apple.com/en-us/105121"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex flex-col gap-3 p-5 rounded-xl border border-border/50 bg-card hover:border-primary/40 hover:bg-secondary/20 transition-all"
+            >
+              <div className="flex items-center justify-between">
+                <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
+                  <Smartphone className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <div>
+                <p className="font-bold text-sm text-foreground">iPhone — Screen Time</p>
+                <p className="text-xs text-muted-foreground mt-1">Settings &rarr; Screen Time &rarr; App Limits</p>
+              </div>
+            </a>
+
+            {/* Android */}
+            <a
+              href="https://support.google.com/android/answer/9346420"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex flex-col gap-3 p-5 rounded-xl border border-border/50 bg-card hover:border-primary/40 hover:bg-secondary/20 transition-all"
+            >
+              <div className="flex items-center justify-between">
+                <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
+                  <Smartphone className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <div>
+                <p className="font-bold text-sm text-foreground">Android — Digital Wellbeing</p>
+                <p className="text-xs text-muted-foreground mt-1">Settings &rarr; Digital Wellbeing &rarr; App Timers</p>
+              </div>
+            </a>
+
+            {/* Desktop */}
+            <a
+              href="https://chromewebstore.google.com/detail/blocksite-block-websites/eiimnmioipafcokbfikbljfdeojpcgbh"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex flex-col gap-3 p-5 rounded-xl border border-border/50 bg-card hover:border-primary/40 hover:bg-secondary/20 transition-all"
+            >
+              <div className="flex items-center justify-between">
+                <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
+                  <Monitor className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <div>
+                <p className="font-bold text-sm text-foreground">Desktop — BlockSite</p>
+                <p className="text-xs text-muted-foreground mt-1">Chrome extension to block sites by URL</p>
+              </div>
+            </a>
+
+          </div>
+        </div>
+
       </div>
     </div>
   );

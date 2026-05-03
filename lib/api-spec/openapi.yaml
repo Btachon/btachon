@@ -1,0 +1,449 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Auth operations
+  - name: profile
+    description: User profile operations
+  - name: friends
+    description: Friends and social operations
+  - name: videos
+    description: Video content management
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/user:
+    get:
+      operationId: getCurrentAuthUser
+      tags: [auth]
+      summary: Get current auth user
+      responses:
+        "200":
+          description: Current auth state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetCurrentAuthUserResponse"
+
+  /mobile-auth/token-exchange:
+    post:
+      operationId: exchangeMobileAuthorizationCode
+      tags: [auth]
+      summary: Exchange mobile auth code for session token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExchangeMobileAuthorizationCodeBody"
+      responses:
+        "200":
+          description: Session token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeMobileAuthorizationCodeResponse"
+
+  /mobile-auth/logout:
+    post:
+      operationId: logoutMobileSession
+      tags: [auth]
+      summary: Log out mobile session
+      responses:
+        "200":
+          description: Logout success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogoutMobileSessionResponse"
+
+  /profile:
+    get:
+      operationId: getProfile
+      tags: [profile]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthorized
+    put:
+      operationId: upsertProfile
+      tags: [profile]
+      summary: Create or update user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertProfileBody"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthorized
+
+  /friends:
+    get:
+      operationId: getFriends
+      tags: [friends]
+      summary: Get friend list for current user
+      responses:
+        "200":
+          description: List of friends
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FriendEntry"
+        "401":
+          description: Unauthorized
+
+  /friends/add:
+    post:
+      operationId: addFriendByCode
+      tags: [friends]
+      summary: Add a friend by their share code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddFriendBody"
+      responses:
+        "200":
+          description: Friend added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendEntry"
+        "400":
+          description: Invalid code or already friends
+        "401":
+          description: Unauthorized
+
+  /friends/{friendUserId}:
+    delete:
+      operationId: removeFriend
+      tags: [friends]
+      summary: Remove a friend
+      parameters:
+        - name: friendUserId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Friend removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+
+  /videos:
+    get:
+      operationId: listVideos
+      tags: [videos]
+      summary: List all videos
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: isShort
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of videos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VideoEntry"
+    post:
+      operationId: createVideo
+      tags: [videos]
+      summary: Add or update a video (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVideoBody"
+      responses:
+        "200":
+          description: Created or updated video
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoEntry"
+        "401":
+          description: Unauthorized
+
+  /videos/{videoId}:
+    delete:
+      operationId: deleteVideo
+      tags: [videos]
+      summary: Delete a video (admin)
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: ["string", "null"]
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        profileImageUrl:
+          type: ["string", "null"]
+      required:
+        - id
+
+    GetCurrentAuthUserResponse:
+      type: object
+      properties:
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/AuthUser"
+            - type: "null"
+      required:
+        - user
+
+    ExchangeMobileAuthorizationCodeBody:
+      type: object
+      properties:
+        code:
+          type: string
+        code_verifier:
+          type: string
+        redirect_uri:
+          type: string
+        state:
+          type: string
+        nonce:
+          type: ["string", "null"]
+      required:
+        - code
+        - code_verifier
+        - redirect_uri
+        - state
+
+    ExchangeMobileAuthorizationCodeResponse:
+      type: object
+      properties:
+        token:
+          type: string
+      required:
+        - token
+
+    LogoutMobileSessionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    UserProfile:
+      type: object
+      properties:
+        userId:
+          type: string
+        displayName:
+          type: ["string", "null"]
+        shabbosCity:
+          type: ["string", "null"]
+        onboardingComplete:
+          type: boolean
+        shareCode:
+          type: string
+        bio:
+          type: ["string", "null"]
+        hobbies:
+          type: ["string", "null"]
+        growthGoals:
+          type: ["string", "null"]
+      required:
+        - userId
+        - onboardingComplete
+        - shareCode
+
+    UpsertProfileBody:
+      type: object
+      properties:
+        displayName:
+          type: ["string", "null"]
+        shabbosCity:
+          type: ["string", "null"]
+        onboardingComplete:
+          type: boolean
+        bio:
+          type: ["string", "null"]
+        hobbies:
+          type: ["string", "null"]
+        growthGoals:
+          type: ["string", "null"]
+
+    FriendEntry:
+      type: object
+      properties:
+        userId:
+          type: string
+        displayName:
+          type: ["string", "null"]
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        profileImageUrl:
+          type: ["string", "null"]
+        shareCode:
+          type: string
+      required:
+        - userId
+        - shareCode
+
+    AddFriendBody:
+      type: object
+      properties:
+        shareCode:
+          type: string
+      required:
+        - shareCode
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    VideoEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        speaker:
+          type: string
+        channel:
+          type: string
+        duration:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        isShort:
+          type: boolean
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+      required:
+        - id
+        - title
+        - speaker
+        - channel
+        - duration
+        - category
+        - description
+        - isShort
+        - sortOrder
+
+    CreateVideoBody:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        speaker:
+          type: string
+        channel:
+          type: string
+        duration:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        isShort:
+          type: boolean
+        sortOrder:
+          type: integer
+      required:
+        - id
+        - title
+        - speaker
+        - channel
+        - duration
+        - category

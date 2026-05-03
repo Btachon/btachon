@@ -1,0 +1,12 @@
+export const perakim = {
+  121: {
+    title: "Tehillim 121",
+    textEn: "A Song of Ascents. I lift up my eyes to the mountains—where does my help come from? My help comes from the Lord, the Maker of heaven and earth. He will not let your foot slip—he who watches over you will not slumber; indeed, he who watches over Israel will neither slumber nor sleep. The Lord watches over you—the Lord is your shade at your right hand; the sun will not harm you by day, nor the moon by night. The Lord will keep you from all harm—he will watch over your life; the Lord will watch over your coming and going both now and forevermore.",
+    textHe: "שִׁיר לַמַּעֲלוֹת: אֶשָּׂא עֵינַי אֶל הֶהָרִים, מֵאַיִן יָבֹא עֶזְרִי. עֶזְרִי מֵעִם יְהוָה, עֹשֵׂה שָׁמַיִם וָאָרֶץ. אַל יִתֵּן לַמּוֹט רַגְלֶךָ, אַל יָנוּם שֹׁמְרֶךָ. הִנֵּה לֹא יָנוּם וְלֹא יִישָׁן שׁוֹמֵר יִשְׂרָאֵל. יְהוָה שֹׁמְרֶךָ, יְהוָה צִלְּךָ עַל יַד יְמִינֶךָ. יוֹמָם הַשֶּׁמֶשׁ לֹא יַכֶּכָּה, וְיָרֵחַ בַּלָּיְלָה. יְהוָה יִשְׁמָרְךָ מִכָּל רָע, יִשְׁמֹר אֶת נַפְשֶׁךָ. יְהוָה יִשְׁמָר צֵאתְךָ וּבוֹאֶךָ מֵעַתָּה וְעַד עוֹלָם."
+  },
+  23: {
+    title: "Tehillim 23",
+    textEn: "A psalm of David. The Lord is my shepherd, I lack nothing. He makes me lie down in green pastures, he leads me beside quiet waters, he refreshes my soul. He guides me along the right paths for his name's sake. Even though I walk through the darkest valley, I will fear no evil, for you are with me; your rod and your staff, they comfort me. You prepare a table before me in the presence of my enemies. You anoint my head with oil; my cup overflows. Surely your goodness and love will follow me all the days of my life, and I will dwell in the house of the Lord forever.",
+    textHe: "מִזְמוֹר לְדָוִד: יְהוָה רֹעִי, לֹא אֶחְסָר. בִּנְאוֹת דֶּשֶׁא יַרְבִּיצֵנִי, עַל מֵי מְנוּחוֹת יְנַהֲלֵנִי. נַפְשִׁי יְשׁוֹבֵב, יַנְחֵנִי בְמַעְגְּלֵי צֶדֶק לְמַעַן שְׁמוֹ. גַּם כִּי אֵלֵךְ בְּגֵיא צַלְמָוֶת, לֹא אִירָא רָע, כִּי אַתָּה עִמָּדִי. שִׁבְטְךָ וּמִשְׁעַנְתֶּךָ, הֵמָּה יְנַחֲמֻנִי. תַּעֲרֹךְ לְפָנַי שֻׁלְחָן נֶגֶד צֹרְרָי, דִּשַּׁנְתָּ בַשֶּׁמֶן רֹאשִׁי, כּוֹסִי רְוָיָה. אַךְ טוֹב וָחֶסֶד יִרְדְּפוּנִי כָּל יְמֵי חַיָּי, וְשַׁבְתִּי בְּבֵית יְהוָה לְאֹרֶךְ יָמִים."
+  }
+};

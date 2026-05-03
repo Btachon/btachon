@@ -1,0 +1,135 @@
+The Netlify deploy errored, with the following guidance provided:
+
+Diagnosis — relevant log lines
+- The build invoked your package script which runs Vite: [line 66](#L66) and [line 68](#L68).
+- Vite failed while loading the config: [line 70](#L70).
+- The root cause is an explicit error thrown because the PORT environment variable is missing: [line 72](#L72).
+- The failing exit from pnpm/vite is shown here: [line 84](#L84) and the overall build failure is reported here: [line 91](#L91).
+
+Error type and cause
+- Type: runtime configuration error during build.
+- Cause: vite.config.ts (or code it imports) requires process.env.PORT to exist and throws when it is not provided. Netlify’s build environment does not set PORT by default, and a build should not require a dev-only env var.
+
+Solution
+You have two ways to fix this. Preferred fix is to make your Vite config tolerant of a missing PORT; alternative is to set PORT in Netlify (less ideal).
+
+A. Preferred: change vite.config.ts so it does not require PORT during build
+1. Open artifacts/btachon/vite.config.ts.
+2. Replace the code that unconditionally throws when PORT is missing with a fallback or only require PORT for the dev server. Example changes:
+
+- If your code currently does something like:
+```ts
+if (!process.env.PORT) {
+  throw new Error('PORT environment variable is required but was not provided.');
+}
+```
+
+- Replace with a safe fallback (example):
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite';
+
+export default defineConfig(({ command }) => {
+  // Only enforce or use PORT for the dev server ("serve"). For build, use a default.
+  if (command === 'serve') {
+    const port = process.env.PORT ? Number(process.env.PORT) : 5173; // default dev port
+    return {
+      server: { port },
+      // ...other dev-only config
+    };
+  }
+
+  // build config — do not require PORT
+  return {
+    // ...build config
+  };
+});
+```
+
+Or simply use a fallback value everywhere you read PORT:
+```ts
+const port = process.env.PORT ? Number(process.env.PORT) : 5173;
+```
+
+Why this works: Vite’s build is run on Netlify and does not need a runtime dev port. Removing the unconditional requirement prevents the config from throwing during build.
+
+B. Alternative: set PORT in Netlify build environment (if you cannot change code)
+- In Netlify UI, go to Site settings → Build & deploy → Environment → Environment variables, and add PORT with a value (e.g. 5173).
+- Or add to netlify.toml under [build.environment]:
+```toml
+[build.environment]
+  PORT = "5173"
+```
+Note: this only masks the symptom — better to update the config so builds don’t depend on dev-only env vars.
+
+Extra checks
+- Ensure the edited vite.config.ts is committed and pushed so Netlify picks up the change.
+- Re-run the Netlify build.
+
+If you want, paste the relevant portion of your vite.config.ts here and I can suggest the exact patch.
+
+The relevant error logs are:
+
+Line 0: build-image version: ac6eb13fbf000e5c09ad677efd8b7c3c2d0142b6 (noble-new-builds)
+Line 1: buildbot version: 1e1f172b82fc46a7a7b4b14d04d14163b44b9b01
+Line 2: Fetching cached dependencies
+Line 3: Failed to fetch cache, continuing with build
+Line 4: Fetching build zip file
+Line 5: Starting to prepare the repo for build
+Line 6: Custom publish path detected. Proceeding with the specified path: 'artifacts/btachon/dist'
+Line 7: Custom build command detected. Proceeding with the specified command: 'pnpm --filter @workspace/btachon... run build'
+Line 8: Installing dependencies
+Line 9: mise ~/.config/mise/config.toml tools: python@3.14.3
+Line 10: mise ~/.config/mise/config.toml tools: ruby@3.4.8
+Line 11: mise ~/.config/mise/config.toml tools: go@1.26.2
+Line 12: v22.22.2 is already installed.
+Line 13: Now using node v22.22.2 (npm v10.9.7)
+Line 57: ❯ Config file
+Line 58:   /opt/build/repo/netlify.toml
+Line 59: ​
+Line 60: ❯ Context
+Line 61:   production
+Line 62: ​
+Line 63: build.command from netlify.toml                               
+Line 64: ────────────────────────────────────────────────────────────────
+Line 65: ​
+Line 66: $ pnpm --filter @workspace/btachon... run build
+Line 67: Failed during stage 'building site': Build script returned non-zero exit code: 2
+Line 68: Scope: 3 of 10 workspace projects
+Line 69: artifacts/btachon build$ vite build --config vite.config.ts
+Line 70: artifacts/btachon build: failed to load config from /opt/build/repo/artifacts/btachon/vite.config.
+Line 71: artifacts/btachon build: error during build:
+Line 72: artifacts/btachon build: Error: PORT environment variable is required but was not provided.
+Line 73: artifacts/btachon build:     at file:///opt/build/repo/artifacts/btachon/node_modules/.vite-temp/vite.c
+Line 74: artifacts/btachon build:     at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+Line 75: artifacts/btachon build:     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader
+Line 76: artifacts/btachon build:     at async loadConfigFromBundledFile (file:///opt/build/repo/node_modules/.p
+Line 77: artifacts/btachon build:     at async bundleAndLoadConfigFile (file:///opt/build/repo/node_modules/.pnp
+Line 78: artifacts/btachon build:     at async loadConfigFromFile (file:///opt/build/repo/node_modules/.pnpm/vit
+Line 79: artifacts/btachon build:     at async resolveConfig (file:///opt/build/repo/node_modules/.pnpm/vite@7.3
+Line 80: artifacts/btachon build:     at async createBuilder (file:///opt/build/repo/node_modules/.pnpm/vite@7.3
+Line 81: artifacts/btachon build:     at async CAC.<anonymous> (file:///opt/build/repo/node_modules/.pnpm/vite@7
+Line 82: artifacts/btachon build: Failed
+Line 83: /opt/build/repo/artifacts/btachon:
+Line 84:  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/btachon@0.0.0 build: `vite build --config vite.config.ts
+Line 85: Exit status 1
+Line 86: ​
+Line 87: "build.command" failed                                        
+Line 88: ────────────────────────────────────────────────────────────────
+Line 89: ​
+Line 90:   Error message
+Line 91:   Command failed with exit code 1: pnpm --filter @workspace/btachon... run build
+Line 92: ​
+Line 93:   Error location
+Line 94:   In build.command from netlify.toml:
+Line 95:   pnpm --filter @workspace/btachon... run build
+Line 96: ​
+Line 97:   Resolved config
+Line 98:   build:
+Line 99:     command: pnpm --filter @workspace/btachon... run build
+Line 100:     commandOrigin: config
+Line 101:     publish: /opt/build/repo/artifacts/btachon/dist
+Line 102:     publishOrigin: config
+Line 103: Build failed due to a user error: Build script returned non-zero exit code: 2
+Line 104: Failing build: Failed to build site
+Line 105: Finished processing build request in 14.528s

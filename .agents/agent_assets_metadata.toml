@@ -1,0 +1,127 @@
+uploads = []
+
+[[generated]]
+id = "YwD6JUtUo8WUvElcVXWJ2"
+uri = "file://artifacts/btachon/src/assets/mascot-greeting.png"
+type = "image"
+title = "Aryeh mascot greeting"
+
+[[generated]]
+id = "z624OJGumJbyn4b2qXru7"
+uri = "file://artifacts/btachon/src/assets/mascot-cheering.png"
+type = "image"
+title = "Aryeh mascot cheering"
+
+[[generated]]
+id = "xZ37DS5K3oDr3gjABuuba"
+uri = "file://artifacts/btachon/src/assets/mascot-pointing.png"
+type = "image"
+title = "Aryeh mascot pointing"
+
+[[generated]]
+id = "PggO_Wa72swzKtON3PZ5y"
+uri = "file://artifacts/btachon/src/assets/mascot-sleeping.png"
+type = "image"
+title = "Aryeh mascot sleeping"
+
+[[generated]]
+id = "2br3E25oLPSV0rNdVvNIH"
+uri = "file://artifacts/btachon/src/assets/hero-learn.png"
+type = "image"
+title = "Beis medrash hero banner"
+
+[[generated]]
+id = "wdrfudceTWMyvJ6xtWCqy"
+uri = "file://artifacts/btachon/src/assets/chavrusa-header.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Knir0fKnvOQ16-SPDSygt"
+uri = "file://artifacts/btachon/src/assets/lishma-header.png"
+type = "image"
+title = "Lishma section header"
+
+[[generated]]
+id = "HSYYt1uuurH7NlmUYaFn8"
+uri = "file://artifacts/btachon/src/assets/study-sessions-header.png"
+type = "image"
+title = "Study sessions header"
+
+[[generated]]
+id = "8KXwiJQeVLLC0ddEmrz6q"
+uri = "file://artifacts/btachon/src/assets/dashboard-hero.png"
+type = "image"
+title = "Dashboard hero strip"
+
+[[generated]]
+id = "MDv5gBgSNAgMbZrTAPEgk"
+uri = "file://artifacts/btachon/src/assets/session-gemara.png"
+type = "image"
+title = "Daf Yomi session image"
+
+[[generated]]
+id = "K30in6mLaNwbNKgvo0YwZ"
+uri = "file://artifacts/btachon/src/assets/session-torah.png"
+type = "image"
+title = "Parsha session image"
+
+[[generated]]
+id = "YE9jmnmAQr5iIMth4LPkn"
+uri = "file://artifacts/btachon/src/assets/session-tehillim.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "q8R9mmdJRiorZfx2cDEAE"
+uri = "file://artifacts/btachon/src/assets/session-mussar.png"
+type = "image"
+title = "Mussar session image"
+
+[[generated]]
+id = "002jrGB0Wz8SsT5bJmqdr"
+uri = "file://artifacts/btachon/src/assets/chai-hero.png"
+type = "image"
+title = "Gemara on shtender warm light"
+
+[[generated]]
+id = "4QMH_PylDqTEtpfiA9sSX"
+uri = "file://artifacts/btachon/src/assets/chevre-hero.png"
+type = "image"
+title = "Three men walking Jerusalem"
+
+[[generated]]
+id = "ULfmn4sZwTJyJ4lFYthl6"
+uri = "file://artifacts/btachon/src/assets/pulse-hero.png"
+type = "image"
+title = "Hand turning Tehillim pages"
+
+[[generated]]
+id = "SeiuCJo6HI9pOkdxi0AZl"
+uri = "file://artifacts/btachon/src/assets/mitzvah-hero.png"
+type = "image"
+title = "Small candle flame glowing"
+
+[[generated]]
+id = "vPgS2_jTAobsIBloC5EhU"
+uri = "file://artifacts/btachon/src/assets/connect-hero.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "J17dofAZ-jVEaWYZVaQEd"
+uri = "file://artifacts/btachon/src/assets/grow-hero.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "rvilka7Cu_q_dRcfQgrQL"
+uri = "file://artifacts/btachon/src/assets/blocker-hero.png"
+type = "image"
+title = "generated_image"
+
+[[outputs]]
+id = "_xkKjRb-eTYT4VWhDeVK_"
+uri = "file://btachon-netlify.zip"
+type = "unspecified"
+title = "Btachon — Netlify Deploy (drag this to Netlify)"

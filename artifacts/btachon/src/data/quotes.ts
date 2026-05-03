@@ -1,0 +1,22 @@
+export const quotes = [
+  { text: "Who is wise? One who learns from every person.", source: "Pirkei Avos 4:1" },
+  { text: "Who is mighty? One who conquers his inclinations.", source: "Pirkei Avos 4:1" },
+  { text: "Who is rich? One who is satisfied with his lot.", source: "Pirkei Avos 4:1" },
+  { text: "Who is honored? One who honors others.", source: "Pirkei Avos 4:1" },
+  { text: "If I am not for myself, who will be for me? But if I am only for myself, what am I? And if not now, when?", source: "Pirkei Avos 1:14" },
+  { text: "Do not say, 'When I have free time I will learn,' for perhaps you will never have free time.", source: "Pirkei Avos 2:5" },
+  { text: "It is not your duty to finish the work, but neither are you at liberty to neglect it.", source: "Pirkei Avos 2:21" },
+  { text: "Make your Torah study a fixed habit.", source: "Pirkei Avos 1:15" },
+  { text: "Provide yourself with a teacher and get yourself a companion.", source: "Pirkei Avos 1:6" },
+  { text: "Judge every person favorably.", source: "Pirkei Avos 1:6" },
+  { text: "Say little and do much.", source: "Pirkei Avos 1:15" },
+  { text: "Receive every person with a cheerful face.", source: "Pirkei Avos 1:15" },
+  { text: "The day is short, the work is vast, the workers are lazy, the reward is great, and the Master of the house is pressing.", source: "Pirkei Avos 2:20" },
+  { text: "Despise no one and disdain nothing, for there is no one who does not have his hour and nothing that does not have its place.", source: "Pirkei Avos 4:3" },
+  { text: "Do not separate yourself from the community.", source: "Pirkei Avos 2:5" },
+  { text: "A person should always view himself as if the whole world depends on him.", source: "Rambam" },
+  { text: "The highest degree of wisdom is to be silent.", source: "Rambam" },
+  { text: "Accept the truth from whatever source it comes.", source: "Rambam" },
+  { text: "The main thing is the deed.", source: "Pirkei Avos 1:17" },
+  { text: "According to the effort is the reward.", source: "Pirkei Avos 5:26" }
+];

@@ -1,0 +1,5 @@
+{
+  "buildCommand": "echo 'This is the API server — it runs on Replit, not Vercel. Deploy artifacts/btachon instead.'",
+  "outputDirectory": ".",
+  "framework": null
+}

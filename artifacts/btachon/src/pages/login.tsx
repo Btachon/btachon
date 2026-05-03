@@ -2,8 +2,12 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookOpen, Users, Shield, Sparkles, Eye, EyeOff } from "lucide-react";
 import heroLearn from "@/assets/hero-learn.png";
-import { storeJwt } from "@workspace/replit-auth-web";
-import { setAuthTokenGetter } from "@workspace/api-client-react";
+import { storeJwt, getStoredJwt } from "@workspace/replit-auth-web";
+import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
+
+function getApiBase(): string {
+  return (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, "") ?? "";
+}
 
 interface LoginProps {
   onLogin: () => void;
@@ -55,7 +59,7 @@ export default function Login({ onLogin }: LoginProps) {
     setError(null);
     setLoading(true);
 
-    const endpoint = mode === "signup" ? "/api/auth/signup" : "/api/auth/login";
+    const endpoint = `${getApiBase()}${mode === "signup" ? "/api/auth/signup" : "/api/auth/login"}`;
     const body: Record<string, string> = { email, password };
     if (mode === "signup" && firstName.trim()) body.firstName = firstName.trim();
 
@@ -71,7 +75,9 @@ export default function Login({ onLogin }: LoginProps) {
         return;
       }
       storeJwt(data.token);
-      setAuthTokenGetter(() => data.token);
+      const apiUrl = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, "");
+      if (apiUrl) setBaseUrl(apiUrl);
+      setAuthTokenGetter(getStoredJwt);
       onLogin();
     } catch {
       setError("Could not connect to the server. Please try again.");

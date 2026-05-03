@@ -2,5 +2,6 @@
   "installCommand": "pnpm install",
   "buildCommand": "pnpm run typecheck:libs && VITE_API_URL=https://discipline-nexus--pearlysabel.replit.app pnpm --filter @workspace/btachon run build",
   "outputDirectory": "artifacts/btachon/dist/public",
-  "framework": null
+  "framework": null,
+  "rewrites": [{ "source": "/((?!assets/).*)", "destination": "/index.html" }]
 }

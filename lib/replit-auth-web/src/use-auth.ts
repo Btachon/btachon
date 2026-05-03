@@ -40,15 +40,18 @@ function getBasePath(): string {
   return base.replace(/\/+$/, "") || "/";
 }
 
+function getApiBase(): string {
+  const meta = import.meta as Record<string, any>;
+  return (meta?.env?.VITE_API_URL as string | undefined)?.replace(/\/+$/, "") ?? "";
+}
+
 export function useAuth(): AuthState {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Wire up the JWT getter for all API calls
     setAuthTokenGetter(getStoredJwt);
 
-    // Extract ?token= from URL if present (post-Google-OAuth redirect)
     const params = new URLSearchParams(window.location.search);
     const urlToken = params.get("token");
     if (urlToken) {
@@ -68,7 +71,7 @@ export function useAuth(): AuthState {
     }
 
     let cancelled = false;
-    fetch("/api/auth/user", {
+    fetch(`${getApiBase()}/api/auth/user`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
@@ -100,13 +103,14 @@ export function useAuth(): AuthState {
 
   const login = useCallback(() => {
     const base = getBasePath();
-    window.location.href = `/api/auth/google?returnTo=${encodeURIComponent(base)}`;
+    const returnTo = window.location.origin + base;
+    window.location.href = `${getApiBase()}/api/auth/google?returnTo=${encodeURIComponent(returnTo)}`;
   }, []);
 
   const logout = useCallback(() => {
     clearJwt();
     setUser(null);
-    fetch("/api/logout", { method: "POST" }).catch(() => {});
+    fetch(`${getApiBase()}/api/logout`, { method: "POST" }).catch(() => {});
     window.location.href = "/";
   }, []);
 

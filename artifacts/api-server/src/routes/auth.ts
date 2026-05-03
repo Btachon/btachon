@@ -17,6 +17,7 @@ import {
 const router: IRouter = Router();
 
 const STATE_COOKIE = "oauth_state";
+const RETURNTO_COOKIE = "oauth_returnto";
 const STATE_COOKIE_TTL = 10 * 60 * 1000;
 
 function setStateCookie(res: Response, state: string) {
@@ -179,14 +180,26 @@ router.get("/auth/google", (req: Request, res: Response) => {
   const state = crypto.randomBytes(16).toString("hex");
   const callbackUrl = getGoogleCallbackUrl(req);
   setStateCookie(res, state);
+  const returnTo = req.query.returnTo as string | undefined;
+  if (returnTo) {
+    res.cookie(RETURNTO_COOKIE, returnTo, {
+      httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: STATE_COOKIE_TTL,
+    });
+  }
   res.redirect(buildGoogleAuthUrl(callbackUrl, state));
 });
 
 router.get("/auth/google/callback", async (req: Request, res: Response) => {
   const { code, state, error } = req.query as Record<string, string>;
 
+  const returnTo = req.cookies?.[RETURNTO_COOKIE] as string | undefined;
+  res.clearCookie(RETURNTO_COOKIE, { path: "/" });
+
+  const frontendBase = (returnTo?.startsWith("http") ? returnTo.replace(/\/$/, "") : null)
+    ?? getFrontendUrl(req);
+
   if (error || !code) {
-    res.redirect(`${getFrontendUrl(req)}/?auth_error=cancelled`);
+    res.redirect(`${frontendBase}/?auth_error=cancelled`);
     return;
   }
 
@@ -194,7 +207,7 @@ router.get("/auth/google/callback", async (req: Request, res: Response) => {
   res.clearCookie(STATE_COOKIE, { path: "/" });
 
   if (!expectedState || state !== expectedState) {
-    res.redirect(`${getFrontendUrl(req)}/?auth_error=state_mismatch`);
+    res.redirect(`${frontendBase}/?auth_error=state_mismatch`);
     return;
   }
 
@@ -212,10 +225,10 @@ router.get("/auth/google/callback", async (req: Request, res: Response) => {
     });
 
     setJwtCookie(res, token);
-    res.redirect(`${getFrontendUrl(req)}/?token=${encodeURIComponent(token)}`);
+    res.redirect(`${frontendBase}/?token=${encodeURIComponent(token)}`);
   } catch (err) {
     req.log.error({ err }, "Google OAuth callback error");
-    res.redirect(`${getFrontendUrl(req)}/?auth_error=server`);
+    res.redirect(`${frontendBase}/?auth_error=server`);
   }
 });
 

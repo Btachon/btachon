@@ -1,13 +1,18 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import _pinoHttp from "pino-http";
+import { createRequire } from "module";
+// Import type only — pulls in the Express Request augmentation (req.log)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type _pinoHttpTypes from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { authMiddleware } from "./middlewares/authMiddleware";
 
+const _require = createRequire(import.meta.url);
+// Use createRequire to get the callable CJS function regardless of TS moduleResolution setting
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const pinoHttp: (...args: any[]) => any = (_pinoHttp as any).default ?? _pinoHttp;
+const pinoHttp: (...args: any[]) => any = _require("pino-http");
 
 const app: Express = express();
 

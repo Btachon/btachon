@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { GetCurrentAuthUserResponse } from "@workspace/api-zod";
 import { db, usersTable } from "@workspace/db";
@@ -16,18 +17,33 @@ import {
 
 const router: IRouter = Router();
 
-const STATE_COOKIE = "oauth_state";
-const RETURNTO_COOKIE = "oauth_returnto";
-const STATE_COOKIE_TTL = 10 * 60 * 1000;
+// ─── Helpers ───────────────────────────────────────────────────────────────────
 
-function setStateCookie(res: Response, state: string) {
-  res.cookie(STATE_COOKIE, state, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: STATE_COOKIE_TTL,
-  });
+function getJwtSecret(): string {
+  const s = process.env.JWT_SECRET;
+  if (!s) throw new Error("JWT_SECRET not set");
+  return s;
+}
+
+/**
+ * We encode the OAuth CSRF nonce AND the returnTo URL inside a signed JWT that
+ * travels as the `state` parameter through Google's OAuth flow.
+ * This removes any dependency on cookies being shared across domains, which
+ * broke when the dev frontend (*.kirk.replit.dev) initiated OAuth but the
+ * callback landed on the deployed backend (discipline-nexus--pearlysabel.replit.app).
+ */
+function buildOAuthState(nonce: string, returnTo: string): string {
+  return jwt.sign({ nonce, returnTo }, getJwtSecret(), { expiresIn: "10m" });
+}
+
+function parseOAuthState(state: string): { nonce: string; returnTo: string } | null {
+  try {
+    const payload = jwt.verify(state, getJwtSecret()) as { nonce: string; returnTo: string };
+    if (typeof payload.nonce !== "string") return null;
+    return { nonce: payload.nonce, returnTo: payload.returnTo ?? "" };
+  } catch {
+    return null;
+  }
 }
 
 async function upsertGoogleUser(googleUser: {
@@ -54,6 +70,13 @@ async function upsertGoogleUser(googleUser: {
     })
     .returning();
   return user;
+}
+
+function getGoogleCallbackUrl(req: Request): string {
+  return (
+    process.env.GOOGLE_CALLBACK_URL ??
+    `${getOrigin(req)}/api/auth/google/callback`
+  );
 }
 
 // ─── Current user ──────────────────────────────────────────────────────────────
@@ -169,47 +192,40 @@ router.post("/auth/login", async (req: Request, res: Response) => {
 
 // ─── Google OAuth ──────────────────────────────────────────────────────────────
 
-function getGoogleCallbackUrl(req: Request): string {
-  return (
-    process.env.GOOGLE_CALLBACK_URL ??
-    `${getOrigin(req)}/api/auth/google/callback`
-  );
-}
-
 router.get("/auth/google", (req: Request, res: Response) => {
-  const state = crypto.randomBytes(16).toString("hex");
+  const returnTo = (req.query.returnTo as string | undefined) ?? getFrontendUrl(req);
+  const nonce = crypto.randomBytes(16).toString("hex");
+
+  // Encode nonce + returnTo in a signed JWT used as the OAuth `state`.
+  // This removes cookie dependency — works even when the initiation domain
+  // differs from the callback domain (e.g. dev frontend vs deployed backend).
+  const state = buildOAuthState(nonce, returnTo);
   const callbackUrl = getGoogleCallbackUrl(req);
-  setStateCookie(res, state);
-  const returnTo = req.query.returnTo as string | undefined;
-  if (returnTo) {
-    res.cookie(RETURNTO_COOKIE, returnTo, {
-      httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: STATE_COOKIE_TTL,
-    });
-  }
+
   res.redirect(buildGoogleAuthUrl(callbackUrl, state));
 });
 
 router.get("/auth/google/callback", async (req: Request, res: Response) => {
-  const { code, state, error } = req.query as Record<string, string>;
+  const { code, state: rawState, error } = req.query as Record<string, string>;
 
-  const returnTo = req.cookies?.[RETURNTO_COOKIE] as string | undefined;
-  res.clearCookie(RETURNTO_COOKIE, { path: "/" });
+  // Default fallback in case state can't be decoded
+  const fallbackFrontend = getFrontendUrl(req);
 
-  const frontendBase = (returnTo?.startsWith("http") ? returnTo.replace(/\/$/, "") : null)
-    ?? getFrontendUrl(req);
-
-  if (error || !code) {
-    res.redirect(`${frontendBase}/?auth_error=cancelled`);
+  if (error || !code || !rawState) {
+    res.redirect(`${fallbackFrontend}/?auth_error=cancelled`);
     return;
   }
 
-  const expectedState = req.cookies?.[STATE_COOKIE];
-  res.clearCookie(STATE_COOKIE, { path: "/" });
-
-  if (!expectedState || state !== expectedState) {
-    res.redirect(`${frontendBase}/?auth_error=state_mismatch`);
+  // Verify and decode the signed state JWT
+  const statePayload = parseOAuthState(rawState);
+  if (!statePayload) {
+    res.redirect(`${fallbackFrontend}/?auth_error=state_mismatch`);
     return;
   }
+
+  const frontendBase = statePayload.returnTo?.startsWith("http")
+    ? statePayload.returnTo.replace(/\/$/, "")
+    : fallbackFrontend;
 
   try {
     const callbackUrl = getGoogleCallbackUrl(req);

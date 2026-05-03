@@ -1,9 +1,19 @@
 [build]
-  command = "pnpm install && BASE_PATH=/ VITE_API_URL=https://discipline-nexus--pearlysabel.replit.app pnpm --filter @workspace/btachon run build"
+  command = "pnpm install && pnpm --filter @workspace/api-server run build:netlify && BASE_PATH=/ pnpm --filter @workspace/btachon run build"
   publish = "artifacts/btachon/dist/public"
 
 [build.environment]
   NODE_VERSION = "20"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "none"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api"
+  status = 200
+  force = true
 
 [[redirects]]
   from = "/*"

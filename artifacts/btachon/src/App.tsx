@@ -17,6 +17,7 @@ import Pulse from "@/pages/pulse";
 import Settings from "@/pages/settings";
 import Login from "@/pages/login";
 import Onboarding from "@/pages/onboarding";
+import Tefillah from "@/pages/tefillah";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +108,7 @@ function AppGate() {
         <Route path="/blocker" component={Blocker} />
         <Route path="/chevre" component={Chevre} />
         <Route path="/settings" component={Settings} />
+        <Route path="/tefillah" component={Tefillah} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

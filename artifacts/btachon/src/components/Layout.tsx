@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Home, BookOpen, Users, Activity, Settings, Menu, LogOut, Flame, ShieldAlert, Mail } from "lucide-react";
+import { Home, BookOpen, Users, Activity, Settings, Menu, LogOut, Flame, ShieldAlert, Mail, ScrollText } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ShabbosBanner } from "@/components/ShabbosBanner";
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/pulse", label: "Pulse", icon: Activity },
   { href: "/learn", label: "Learn", icon: BookOpen },
   { href: "/grow", label: "Grow", icon: Flame },
+  { href: "/tefillah", label: "Tefillah", icon: ScrollText },
   { href: "/chevre", label: "Connect", icon: Users },
   { href: "/blocker", label: "Blocker", icon: ShieldAlert },
   { href: "/settings", label: "Settings", icon: Settings },

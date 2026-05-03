@@ -2,7 +2,6 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { perakim } from "@/data/perakim";
-import { prayers } from "@/data/prayers";
 import { mishnayos } from "@/data/mishnayos";
 import { halachos } from "@/data/halachos";
 import { getMitzvahForDate } from "@/data/mitzvos";
@@ -20,6 +19,19 @@ import { useShabbos } from "@/hooks/useShabbos";
 import { formatTimeInTz } from "@/lib/shabbos";
 import { useLocation } from "wouter";
 import blockerHero from "@/assets/blocker-hero.png";
+
+const prayers = {
+  modehAni: {
+    title: "Modeh Ani",
+    textHe: "מוֹדֶה אֲנִי לְפָנֶיךָ מֶלֶךְ חַי וְקַיָּם שֶׁהֶחֱזַרְתָּ בִּי נִשְׁמָתִי בְּחֶמְלָה, רַבָּה אֱמוּנָתֶךָ.",
+    textEn: "I give thanks to You, living and everlasting King, for You have restored my soul within me with compassion. Great is Your faithfulness.",
+  },
+  shema: {
+    title: "Shema",
+    textHe: "שְׁמַע יִשְׂרָאֵל יְהוָה אֱלֹהֵינוּ יְהוָה אֶחָד.",
+    textEn: "Hear, O Israel: The Lord our God, the Lord is one.",
+  },
+} as const;
 
 const GATEWAY_OPTIONS = [
   "Perek 121", "Perek 23", "One Halacha", "One Mishna",

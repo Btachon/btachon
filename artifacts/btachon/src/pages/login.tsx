@@ -106,7 +106,7 @@ export default function Login({ onLogin }: LoginProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <div dir="rtl" className="text-4xl md:text-6xl font-black text-white/95 tracking-tight leading-none drop-shadow-lg">
+            <div className="text-4xl md:text-6xl font-black text-white/95 tracking-tight leading-none drop-shadow-lg">
               בטחון
             </div>
             <div className="text-[10px] md:text-xs font-bold tracking-[0.25em] uppercase text-white/50 mt-1.5 hidden md:block">

@@ -1,56 +1,48 @@
 import { useState, useEffect } from 'react';
 
+function readItem<T>(prefixedKey: string, initialValue: T): T {
+  try {
+    const raw = window.localStorage.getItem(prefixedKey);
+    if (raw === null) return initialValue;
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      // Stored without JSON.stringify (legacy) — return raw string as-is
+      return raw as unknown as T;
+    }
+  } catch {
+    return initialValue;
+  }
+}
+
 export function useLocalStorage<T>(key: string, initialValue: T) {
   const prefixedKey = `btachon:${key}`;
-  
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    try {
-      const item = window.localStorage.getItem(prefixedKey);
-      return item ? JSON.parse(item) : initialValue;
-    } catch (error) {
-      console.warn(`Error reading localStorage key "${prefixedKey}":`, error);
-      return initialValue;
-    }
-  });
+
+  const [storedValue, setStoredValue] = useState<T>(() =>
+    readItem(prefixedKey, initialValue),
+  );
 
   const setValue = (value: T | ((val: T) => T)) => {
     try {
       const valueToStore = value instanceof Function ? value(storedValue) : value;
       setStoredValue(valueToStore);
       window.localStorage.setItem(prefixedKey, JSON.stringify(valueToStore));
-      
-      // Dispatch a custom event so other instances can update
       window.dispatchEvent(new Event(`local-storage-${prefixedKey}`));
-    } catch (error) {
-      console.warn(`Error setting localStorage key "${prefixedKey}":`, error);
+    } catch {
+      // silently ignore write failures (e.g. private mode storage full)
     }
   };
 
   useEffect(() => {
-    const handleStorageChange = (e: Event) => {
-      try {
-        const item = window.localStorage.getItem(prefixedKey);
-        if (item) {
-          setStoredValue(JSON.parse(item));
-        }
-      } catch (error) {
-        console.warn(error);
-      }
+    const handleChange = () => setStoredValue(readItem(prefixedKey, initialValue));
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === prefixedKey) handleChange();
     };
-    
-    // Also listen to standard storage events for cross-tab sync
-    const handleStandardStorage = (e: StorageEvent) => {
-      if (e.key === prefixedKey && e.newValue) {
-        setStoredValue(JSON.parse(e.newValue));
-      }
-    };
-
-    window.addEventListener(`local-storage-${prefixedKey}`, handleStorageChange);
-    window.addEventListener('storage', handleStandardStorage);
-    
+    window.addEventListener(`local-storage-${prefixedKey}`, handleChange);
+    window.addEventListener('storage', handleStorage);
     return () => {
-      window.removeEventListener(`local-storage-${prefixedKey}`, handleStorageChange);
-      window.removeEventListener('storage', handleStandardStorage);
+      window.removeEventListener(`local-storage-${prefixedKey}`, handleChange);
+      window.removeEventListener('storage', handleStorage);
     };
   }, [prefixedKey]);
 

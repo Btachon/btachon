@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, BookOpen, Users, ShieldCheck, Sparkles } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
+import heroLearn from "@/assets/hero-learn.png";
 import { storeJwt, getStoredJwt } from "@workspace/replit-auth-web";
 import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
 
@@ -14,7 +15,7 @@ interface LoginProps {
 
 function GoogleIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
       <path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
       <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
       <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
@@ -24,16 +25,9 @@ function GoogleIcon() {
 }
 
 const PILLARS = [
-  { label: "Ben Adam LaMakom", sub: "You & Hashem" },
-  { label: "Ben Adam LaChavero", sub: "You & Others" },
-  { label: "Ben Adam LeAtzmo", sub: "You & Yourself" },
-];
-
-const FEATURES = [
-  { icon: BookOpen, text: "Learning Lab & Shiurim" },
-  { icon: Sparkles, text: "613 Chai Habit Tracker" },
-  { icon: Users, text: "Chevre & Accountability" },
-  { icon: ShieldCheck, text: "Shabbos Mode + Zmanim" },
+  { hebrew: "בֵּן אָדָם לַמָּקוֹם", en: "Ben Adam LaMakom", sub: "Between you and Hashem" },
+  { hebrew: "בֵּן אָדָם לַחֲבֵרוֹ", en: "Ben Adam LaChavero", sub: "Between you and others" },
+  { hebrew: "בֵּן אָדָם לְעַצְמוֹ", en: "Ben Adam LeAtzmo", sub: "Between you and yourself" },
 ];
 
 export default function Login({ onLogin }: LoginProps) {
@@ -51,8 +45,8 @@ export default function Login({ onLogin }: LoginProps) {
     if (err) {
       setError(
         err === "cancelled" ? "Sign-in was cancelled. Please try again."
-        : err === "state_mismatch" ? "Security check failed. Please try again."
-        : "Something went wrong with Google sign-in. Try again.",
+          : err === "state_mismatch" ? "Security check failed. Please try again."
+          : "Something went wrong with Google sign-in. Please try again.",
       );
       params.delete("auth_error");
       window.history.replaceState({}, "", window.location.pathname + (params.toString() ? `?${params}` : ""));
@@ -90,75 +84,122 @@ export default function Login({ onLogin }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center relative overflow-hidden px-4 py-10">
+    <div className="min-h-screen bg-[#0d0c0a] flex flex-col md:flex-row overflow-hidden">
 
-      {/* Ambient glow */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/6 blur-[120px]" />
-        <div className="absolute bottom-0 left-1/4 w-[300px] h-[300px] rounded-full bg-primary/4 blur-[80px]" />
+      {/* ── Left panel — image + pillars ── */}
+      <div className="relative md:w-[52%] h-52 md:h-screen flex-shrink-0 overflow-hidden">
+        <img
+          src={heroLearn}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover object-center scale-105"
+        />
+
+        {/* Gradients */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/80 md:bg-gradient-to-r md:from-black/50 md:via-black/20 md:to-black/90" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent md:hidden" />
+
+        {/* Content */}
+        <div className="absolute inset-0 flex flex-col justify-between p-6 md:p-10">
+          {/* Top: wordmark */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div dir="rtl" className="text-4xl md:text-6xl font-black text-white/95 tracking-tight leading-none drop-shadow-lg">
+              בטחון
+            </div>
+            <div className="text-[10px] md:text-xs font-bold tracking-[0.25em] uppercase text-white/50 mt-1.5 hidden md:block">
+              Jewish Personal Growth
+            </div>
+          </motion.div>
+
+          {/* Bottom: three pillars (desktop only) */}
+          <div className="hidden md:block">
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="text-xs text-white/40 font-medium tracking-widest uppercase mb-4"
+            >
+              Three dimensions of growth
+            </motion.p>
+            <div className="space-y-2">
+              {PILLARS.map((p, i) => (
+                <motion.div
+                  key={p.en}
+                  initial={{ opacity: 0, x: -16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.35 + i * 0.1, duration: 0.45 }}
+                  className="flex items-center gap-3"
+                >
+                  <div className="w-0.5 h-8 rounded-full bg-primary/70 shrink-0" />
+                  <div>
+                    <div dir="rtl" className="text-sm font-semibold text-primary/90 leading-tight">{p.hebrew}</div>
+                    <div className="text-xs text-white/50 mt-0.5">{p.sub}</div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8 }}
+              className="mt-8 text-sm font-medium text-white/30 italic"
+            >
+              "Trust. Connect. Grow."
+            </motion.p>
+          </div>
+        </div>
       </div>
 
-      <div className="relative z-10 w-full max-w-sm">
-        {/* Brand header */}
+      {/* ── Right panel — auth form ── */}
+      <div className="flex-1 flex flex-col justify-center px-6 md:px-12 py-8 md:py-0 bg-[#0d0c0a]">
         <motion.div
-          initial={{ opacity: 0, y: -16 }}
+          initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-8"
+          transition={{ duration: 0.45, delay: 0.15 }}
+          className="w-full max-w-[360px] mx-auto"
         >
-          <div dir="rtl" className="text-5xl font-black text-primary tracking-tight leading-none mb-1">בטחון</div>
-          <div className="text-xs font-bold tracking-[0.2em] uppercase text-muted-foreground/60 mt-1">Btachon · Jewish Personal Growth</div>
-
-          {/* Three pillars */}
-          <div className="flex items-center justify-center gap-2 mt-5 flex-wrap">
-            {PILLARS.map((p, i) => (
-              <motion.div
-                key={p.label}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 + i * 0.08 }}
-                className="flex flex-col items-center px-3 py-1.5 rounded-lg border border-primary/20 bg-primary/5"
-              >
-                <span className="text-[10px] font-bold text-primary leading-tight">{p.label}</span>
-                <span className="text-[9px] text-muted-foreground/60 leading-tight">{p.sub}</span>
-              </motion.div>
-            ))}
+          {/* Header */}
+          <div className="mb-7">
+            <h1 className="text-2xl font-bold text-white tracking-tight">
+              {mode === "signin" ? "Welcome back" : "Join Btachon"}
+            </h1>
+            <p className="text-sm text-white/40 mt-1">
+              {mode === "signin"
+                ? "Sign in to continue your growth journey."
+                : "Create your free account and begin."}
+            </p>
           </div>
-        </motion.div>
 
-        {/* Auth card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, delay: 0.1 }}
-          className="rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm shadow-2xl shadow-black/30 p-6"
-        >
           {/* Google */}
           <button
             onClick={onLogin}
-            className="w-full h-12 flex items-center justify-center gap-3 rounded-xl border border-border bg-secondary/40 hover:bg-secondary/70 text-foreground font-semibold text-sm transition-all hover:border-primary/30"
+            className="w-full h-12 flex items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold text-sm transition-all hover:border-white/20"
           >
             <GoogleIcon />
             Continue with Google
           </button>
 
           {/* Divider */}
-          <div className="flex items-center gap-3 my-4">
-            <div className="flex-1 h-px bg-border/40" />
-            <span className="text-[11px] text-muted-foreground/40 font-medium">or create a Btachon account</span>
-            <div className="flex-1 h-px bg-border/40" />
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-white/8" />
+            <span className="text-[11px] text-white/25">or</span>
+            <div className="flex-1 h-px bg-white/8" />
           </div>
 
-          {/* Mode toggle */}
-          <div className="flex rounded-xl border border-border/50 bg-background/40 p-1 mb-4">
+          {/* Mode tabs */}
+          <div className="flex rounded-xl bg-white/5 border border-white/8 p-1 mb-5">
             {(["signin", "signup"] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => { setMode(m); setError(null); }}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold tracking-wide transition-all ${
+                className={`flex-1 py-2 rounded-lg text-xs font-bold tracking-wide transition-all duration-200 ${
                   mode === m
-                    ? "bg-primary text-primary-foreground shadow"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "bg-primary text-[#1a1200] shadow"
+                    : "text-white/40 hover:text-white/70"
                 }`}
               >
                 {m === "signin" ? "Sign In" : "Create Account"}
@@ -171,9 +212,9 @@ export default function Login({ onLogin }: LoginProps) {
             <AnimatePresence>
               {mode === "signup" && (
                 <motion.div
-                  key="firstName"
-                  initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                  animate={{ opacity: 1, height: "auto", marginBottom: 0 }}
+                  key="name"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.2 }}
                 >
@@ -182,7 +223,7 @@ export default function Login({ onLogin }: LoginProps) {
                     placeholder="Your name (e.g. Moshe, Rivka)"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full h-11 px-4 rounded-xl border border-border/50 bg-background/60 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 focus:bg-background/80 transition-all"
+                    className="w-full h-11 px-4 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-primary/50 focus:bg-white/8 transition-all"
                   />
                 </motion.div>
               )}
@@ -195,7 +236,7 @@ export default function Login({ onLogin }: LoginProps) {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              className="w-full h-11 px-4 rounded-xl border border-border/50 bg-background/60 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 focus:bg-background/80 transition-all"
+              className="w-full h-11 px-4 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-primary/50 focus:bg-white/8 transition-all"
             />
 
             <div className="relative">
@@ -206,12 +247,12 @@ export default function Login({ onLogin }: LoginProps) {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                className="w-full h-11 px-4 pr-11 rounded-xl border border-border/50 bg-background/60 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 focus:bg-background/80 transition-all"
+                className="w-full h-11 px-4 pr-11 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-primary/50 focus:bg-white/8 transition-all"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -223,7 +264,7 @@ export default function Login({ onLogin }: LoginProps) {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="px-3.5 py-2.5 rounded-xl bg-destructive/10 border border-destructive/25 text-destructive text-xs text-center"
+                  className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center"
                 >
                   {error}
                 </motion.div>
@@ -233,30 +274,36 @@ export default function Login({ onLogin }: LoginProps) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-bold text-sm tracking-wide hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20"
+              className="w-full h-12 rounded-xl bg-primary text-[#1a1200] font-bold text-sm tracking-wide hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20 mt-1"
             >
               {loading
                 ? "Please wait..."
-                : mode === "signin"
-                ? "Sign In to Btachon"
-                : "Create My Btachon Account"}
+                : mode === "signin" ? "Sign In" : "Create My Account"}
             </button>
           </form>
 
-          {/* Feature hints */}
-          <div className="grid grid-cols-2 gap-1.5 mt-5 pt-4 border-t border-border/30">
-            {FEATURES.map((f) => (
-              <div key={f.text} className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50">
-                <f.icon className="w-3 h-3 text-primary/50 shrink-0" />
-                <span>{f.text}</span>
-              </div>
-            ))}
+          {/* Three pillars — mobile only */}
+          <div className="mt-8 pt-6 border-t border-white/8 md:hidden">
+            <p className="text-[10px] text-white/30 font-medium tracking-widest uppercase mb-3">
+              Three dimensions of growth
+            </p>
+            <div className="space-y-2">
+              {PILLARS.map((p) => (
+                <div key={p.en} className="flex items-center gap-2.5">
+                  <div className="w-0.5 h-6 rounded-full bg-primary/60 shrink-0" />
+                  <div>
+                    <span dir="rtl" className="text-xs font-semibold text-primary/80">{p.hebrew}</span>
+                    <span className="text-[10px] text-white/35 ml-2">{p.sub}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </motion.div>
 
-        <p className="text-center text-[10px] text-muted-foreground/30 mt-4">
-          Private, secure, and ad-free
-        </p>
+          <p className="text-center text-[10px] text-white/20 mt-6">
+            Private, secure, and ad-free
+          </p>
+        </motion.div>
       </div>
     </div>
   );

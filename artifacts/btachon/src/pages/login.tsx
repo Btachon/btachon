@@ -42,12 +42,15 @@ export default function Login({ onLogin }: LoginProps) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const err = params.get("auth_error");
+    const detail = params.get("auth_detail");
     if (err) {
       setError(
         err === "cancelled" ? "Sign-in was cancelled. Please try again."
           : err === "state_mismatch" ? "Security check failed. Please try again."
+          : detail ? `Google sign-in error: ${detail}`
           : "Something went wrong with Google sign-in. Please try again.",
       );
+      params.delete("auth_detail");
       params.delete("auth_error");
       window.history.replaceState({}, "", window.location.pathname + (params.toString() ? `?${params}` : ""));
     }

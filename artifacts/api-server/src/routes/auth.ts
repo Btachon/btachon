@@ -244,7 +244,8 @@ router.get("/auth/google/callback", async (req: Request, res: Response) => {
     res.redirect(`${frontendBase}/?token=${encodeURIComponent(token)}`);
   } catch (err) {
     req.log.error({ err }, "Google OAuth callback error");
-    res.redirect(`${frontendBase}/?auth_error=server`);
+    const detail = encodeURIComponent(err instanceof Error ? err.message.slice(0, 200) : String(err).slice(0, 200));
+    res.redirect(`${frontendBase}/?auth_error=server&auth_detail=${detail}`);
   }
 });
 

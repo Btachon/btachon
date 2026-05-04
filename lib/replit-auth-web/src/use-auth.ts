@@ -104,7 +104,10 @@ export function useAuth(): AuthState {
   const login = useCallback(() => {
     const base = getBasePath();
     const returnTo = window.location.origin + base;
-    window.location.href = `${getApiBase()}/api/auth/google?returnTo=${encodeURIComponent(returnTo)}`;
+    const url = `${getApiBase()}/api/auth/google?returnTo=${encodeURIComponent(returnTo)}`;
+    // Break out of any iframe so Google OAuth isn't blocked by X-Frame-Options
+    const target = window.top ?? window;
+    target.location.href = url;
   }, []);
 
   const logout = useCallback(() => {

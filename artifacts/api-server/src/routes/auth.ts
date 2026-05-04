@@ -54,19 +54,47 @@ async function upsertGoogleUser(googleUser: {
   picture?: string;
 }) {
   const id = `google_${googleUser.sub}`;
-  const userData = {
-    id,
-    email: googleUser.email ?? null,
-    firstName: googleUser.given_name ?? null,
-    lastName: googleUser.family_name ?? null,
-    profileImageUrl: googleUser.picture ?? null,
-  };
+
+  // Look up by email first — handles cases where an old/broken record
+  // already exists with that email (e.g. from a previous google_undefined bug)
+  const existing = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.email, googleUser.email))
+    .limit(1);
+
+  if (existing.length > 0) {
+    const [user] = await db
+      .update(usersTable)
+      .set({
+        firstName: googleUser.given_name ?? existing[0].firstName,
+        lastName: googleUser.family_name ?? existing[0].lastName,
+        profileImageUrl: googleUser.picture ?? existing[0].profileImageUrl,
+        updatedAt: new Date(),
+      })
+      .where(eq(usersTable.email, googleUser.email))
+      .returning();
+    return user;
+  }
+
   const [user] = await db
     .insert(usersTable)
-    .values(userData)
+    .values({
+      id,
+      email: googleUser.email ?? null,
+      firstName: googleUser.given_name ?? null,
+      lastName: googleUser.family_name ?? null,
+      profileImageUrl: googleUser.picture ?? null,
+    })
     .onConflictDoUpdate({
       target: usersTable.id,
-      set: { ...userData, updatedAt: new Date() },
+      set: {
+        email: googleUser.email ?? null,
+        firstName: googleUser.given_name ?? null,
+        lastName: googleUser.family_name ?? null,
+        profileImageUrl: googleUser.picture ?? null,
+        updatedAt: new Date(),
+      },
     })
     .returning();
   return user;

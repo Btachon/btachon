@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAuth } from "@workspace/replit-auth-web";
+import { useAuth, getStoredJwt } from "@workspace/replit-auth-web";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,10 +45,18 @@ async function fetchCampaigns(): Promise<Campaign[]> {
   });
 }
 
+function authHeaders(extra?: Record<string, string>): Record<string, string> {
+  const token = getStoredJwt();
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extra,
+  };
+}
+
 async function createCampaign(body: { title: string; personName: string; campaignType: string }) {
   const res = await fetch(`${BASE}api/pulse/campaigns`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     credentials: "include",
     body: JSON.stringify(body),
   });
@@ -59,6 +67,7 @@ async function createCampaign(body: { title: string; personName: string; campaig
 async function commitToPerek(campaignId: string): Promise<CommitResult> {
   const res = await fetch(`${BASE}api/pulse/campaigns/${campaignId}/commit`, {
     method: "POST",
+    headers: authHeaders(),
     credentials: "include",
   });
   if (res.status === 409) {

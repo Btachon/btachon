@@ -19,6 +19,7 @@ import Login from "@/pages/login";
 import Onboarding from "@/pages/onboarding";
 import Tefillah from "@/pages/tefillah";
 import Welcome from "@/pages/welcome";
+import Notifications from "@/pages/notifications";
 
 const queryClient = new QueryClient();
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -35,6 +36,7 @@ function AppRoutes() {
       <Route path="/chevre" component={Chevre} />
       <Route path="/settings" component={Settings} />
       <Route path="/tefillah" component={Tefillah} />
+      <Route path="/notifications" component={Notifications} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Home, BookOpen, Users, Activity, Settings, Menu, LogOut, Flame, ShieldAlert, Mail, ScrollText } from "lucide-react";
+import { Home, BookOpen, Users, Activity, Settings, Menu, LogOut, Flame, ShieldAlert, Mail, ScrollText, Bell } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ShabbosBanner } from "@/components/ShabbosBanner";
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: "/grow", label: "Grow", icon: Flame },
   { href: "/tefillah", label: "Tefillah", icon: ScrollText },
   { href: "/chevre", label: "Connect", icon: Users },
+  { href: "/notifications", label: "Alerts", icon: Bell },
   { href: "/blocker", label: "Blocker", icon: ShieldAlert },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -134,13 +135,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </main>
 
         {/* Mobile Bottom Tab Bar */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-card flex items-center justify-around p-2 z-40">
-          {NAV_ITEMS.slice(0, 6).map((item) => {
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-card flex items-center justify-around p-1.5 z-40">
+          {NAV_ITEMS.slice(0, 7).map((item) => {
             const isActive = location === item.href;
             return (
               <Link key={item.href} href={item.href}>
                 <div
-                  className={`flex flex-col items-center justify-center p-1.5 rounded-lg cursor-pointer ${
+                  className={`flex flex-col items-center justify-center p-1 rounded-lg cursor-pointer relative ${
                     isActive ? "text-primary" : "text-muted-foreground"
                   }`}
                 >

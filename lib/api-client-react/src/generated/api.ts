@@ -34,6 +34,7 @@ import type {
   NotificationEntry,
   RegisterAsTutorBody,
   RespondToFriendRequestBody,
+  RespondToLearnSessionBody,
   SendFriendRequestBody,
   SuccessResponse,
   TutorEntry,
@@ -2041,7 +2042,7 @@ export function useListLearnSessions<
 }
 
 /**
- * @summary Create a learn session
+ * @summary Create a learn session or tutor request
  */
 export const getCreateLearnSessionUrl = () => {
   return `/api/learn-sessions`;
@@ -2104,7 +2105,7 @@ export type CreateLearnSessionMutationBody = BodyType<CreateLearnSessionBody>;
 export type CreateLearnSessionMutationError = ErrorType<void>;
 
 /**
- * @summary Create a learn session
+ * @summary Create a learn session or tutor request
  */
 export const useCreateLearnSession = <
   TError = ErrorType<void>,
@@ -2124,6 +2125,94 @@ export const useCreateLearnSession = <
   TContext
 > => {
   return useMutation(getCreateLearnSessionMutationOptions(options));
+};
+
+/**
+ * @summary Tutor responds to a student learning request
+ */
+export const getRespondToLearnSessionUrl = (id: string) => {
+  return `/api/learn-sessions/${id}/respond`;
+};
+
+export const respondToLearnSession = async (
+  id: string,
+  respondToLearnSessionBody: RespondToLearnSessionBody,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getRespondToLearnSessionUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(respondToLearnSessionBody),
+  });
+};
+
+export const getRespondToLearnSessionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof respondToLearnSession>>,
+    TError,
+    { id: string; data: BodyType<RespondToLearnSessionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof respondToLearnSession>>,
+  TError,
+  { id: string; data: BodyType<RespondToLearnSessionBody> },
+  TContext
+> => {
+  const mutationKey = ["respondToLearnSession"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof respondToLearnSession>>,
+    { id: string; data: BodyType<RespondToLearnSessionBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return respondToLearnSession(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RespondToLearnSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof respondToLearnSession>>
+>;
+export type RespondToLearnSessionMutationBody =
+  BodyType<RespondToLearnSessionBody>;
+export type RespondToLearnSessionMutationError = ErrorType<void>;
+
+/**
+ * @summary Tutor responds to a student learning request
+ */
+export const useRespondToLearnSession = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof respondToLearnSession>>,
+    TError,
+    { id: string; data: BodyType<RespondToLearnSessionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof respondToLearnSession>>,
+  TError,
+  { id: string; data: BodyType<RespondToLearnSessionBody> },
+  TContext
+> => {
+  return useMutation(getRespondToLearnSessionMutationOptions(options));
 };
 
 /**

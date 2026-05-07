@@ -21,6 +21,8 @@ import {
   useContactTutor,
   useListLearnSessions,
   useCreateLearnSession,
+  useRespondToLearnSession,
+  useGetProfile,
   getListLearnSessionsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -92,6 +94,9 @@ export default function Learn() {
   const contactTutor = useContactTutor();
   const { data: allSessions = [], isLoading: sessionsLoading, refetch: refetchSessions } = useListLearnSessions();
   const createLearnSession = useCreateLearnSession();
+  const respondToSession = useRespondToLearnSession();
+  const { data: myProfile } = useGetProfile();
+  const myUserId = (myProfile as any)?.userId;
   const [becomeTutorOpen, setBecomeTutorOpen] = useState(false);
 
   const dbTutors = tutorList as any[];
@@ -105,11 +110,37 @@ export default function Learn() {
     setIsJoinModalOpen(true);
   };
 
-  const handleRequestTutor = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleRequestTutor = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    toast.success("Request noted!", { description: "We'll match you with an available tutor soon." });
-    (e.target as HTMLFormElement).reset();
-    document.getElementById("close-request-tutor")?.click();
+    const formData = new FormData(e.currentTarget);
+    const topic = formData.get("topic") as string;
+    const level = formData.get("level") as string;
+    const time = formData.get("time") as string;
+    const language = formData.get("language") as string;
+    try {
+      await createLearnSession.mutateAsync({ data: {
+        type: "request",
+        title: topic,
+        description: `Available: ${time} · Language: ${language}`,
+        level,
+      }});
+      qc.invalidateQueries({ queryKey: getListLearnSessionsQueryKey() });
+      toast.success("Request posted!", { description: "Tutors can now see it and reach out to you via Alerts." });
+      (e.target as HTMLFormElement).reset();
+      document.getElementById("close-request-tutor")?.click();
+    } catch {
+      toast.error("Could not post request. Please try again.");
+    }
+  };
+
+  const handleRespondToRequest = async (sessionId: string, message: string, closeId: string) => {
+    try {
+      await respondToSession.mutateAsync({ id: sessionId, data: { message: message || null } });
+      toast.success("Offer sent!", { description: "The student will see your message in their Alerts." });
+      document.getElementById(closeId)?.click();
+    } catch {
+      toast.error("Could not send response.");
+    }
   };
 
   const handleBecomeTutor = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -465,27 +496,35 @@ export default function Learn() {
                             </div>
                           </div>
                           <div className="flex gap-2 mt-4 pt-4 border-t border-border/50">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button size="sm" className="flex-1">Contact</Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Contact {t.displayName}</DialogTitle>
-                                  <DialogDescription>Send a message to connect for learning</DialogDescription>
-                                </DialogHeader>
-                                <form onSubmit={(e) => handleRequestChavrusa(e, t.id)} className="space-y-4 pt-4">
-                                  <Textarea name="message" required placeholder={`Hi ${t.displayName}, I'm interested in learning ${t.subjects.split(",")[0].trim()} together...`} className="resize-none" rows={4} />
-                                  <DialogFooter>
-                                    <Button id={`close-chavrusa-${t.id}`} type="button" variant="outline">Cancel</Button>
-                                    <Button type="submit">Send Message</Button>
-                                  </DialogFooter>
-                                </form>
-                              </DialogContent>
-                            </Dialog>
-                            <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-destructive" onClick={handleRemoveTutorListing}>
-                              <X className="w-4 h-4" />
-                            </Button>
+                            {t.userId !== myUserId ? (
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button size="sm" className="flex-1">Contact</Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Contact {t.displayName}</DialogTitle>
+                                    <DialogDescription>Your message goes to their Alerts — they can accept and share their Zoom link with you.</DialogDescription>
+                                  </DialogHeader>
+                                  <form onSubmit={(e) => handleRequestChavrusa(e, t.id)} className="space-y-4 pt-4">
+                                    <Textarea name="message" required placeholder={`Hi ${t.displayName}, I'm interested in learning ${t.subjects.split(",")[0].trim()} together...`} className="resize-none" rows={4} />
+                                    <DialogFooter>
+                                      <Button id={`close-chavrusa-${t.id}`} type="button" variant="outline">Cancel</Button>
+                                      <Button type="submit" disabled={contactTutor.isPending}>
+                                        {contactTutor.isPending ? "Sending..." : "Send Message"}
+                                      </Button>
+                                    </DialogFooter>
+                                  </form>
+                                </DialogContent>
+                              </Dialog>
+                            ) : (
+                              <div className="flex-1 flex items-center gap-2">
+                                <Badge variant="secondary" className="text-xs">Your listing</Badge>
+                                <Button size="sm" variant="ghost" className="ml-auto text-muted-foreground hover:text-destructive" onClick={handleRemoveTutorListing}>
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -494,6 +533,74 @@ export default function Learn() {
                 </div>
               )}
             </div>
+
+            {/* Open Learning Requests Board */}
+            {(() => {
+              const openRequests = (allSessions as any[]).filter(s => s.type === "request");
+              if (openRequests.length === 0) return null;
+              return (
+                <div className="space-y-5">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-2xl font-bold tracking-tight">Open Learning Requests</h3>
+                    <Badge variant="secondary">{openRequests.length}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground -mt-2">Students looking for a tutor. Click "I Can Help" to reach out.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {openRequests.map((req: any) => (
+                      <Card key={req.id} className="border-border shadow-sm">
+                        <CardContent className="p-5">
+                          <div className="flex items-start justify-between gap-2 mb-3">
+                            <div>
+                              <p className="font-bold text-base leading-tight">{req.title}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">By {req.hostName}</p>
+                            </div>
+                            <Badge variant="outline" className="shrink-0 text-xs">{req.level}</Badge>
+                          </div>
+                          {req.description && (
+                            <p className="text-sm text-muted-foreground mb-4">{req.description}</p>
+                          )}
+                          {req.hostUserId === myUserId ? (
+                            <p className="text-xs text-primary font-medium">Your request — tutors will reach out via your Alerts.</p>
+                          ) : (
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button size="sm" className="w-full">I Can Help</Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Offer to help {req.hostName}</DialogTitle>
+                                  <DialogDescription>They'll get a notification in their Alerts so they can accept and connect with you.</DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-3 pt-2">
+                                  <Textarea
+                                    id={`respond-msg-${req.id}`}
+                                    placeholder={`Hi ${req.hostName}, I can help you with ${req.title}! I'm available...`}
+                                    className="resize-none"
+                                    rows={4}
+                                  />
+                                  <DialogFooter>
+                                    <Button id={`close-respond-${req.id}`} type="button" variant="outline">Cancel</Button>
+                                    <Button
+                                      onClick={() => {
+                                        const msg = (document.getElementById(`respond-msg-${req.id}`) as HTMLTextAreaElement)?.value ?? "";
+                                        handleRespondToRequest(req.id, msg, `close-respond-${req.id}`);
+                                      }}
+                                      disabled={respondToSession.isPending}
+                                    >
+                                      {respondToSession.isPending ? "Sending..." : "Send Offer"}
+                                    </Button>
+                                  </DialogFooter>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </motion.div>
         )}
 

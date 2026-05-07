@@ -106,7 +106,7 @@ export default function Dashboard() {
   };
 
   const hour = now.getHours();
-  const greeting = hour < 12 ? "Boker Tov" : hour < 18 ? "Gut Tag" : "Layla Tov";
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   const today = formatTime(todayMinutes);
   const total = formatTime(totalMinutes);

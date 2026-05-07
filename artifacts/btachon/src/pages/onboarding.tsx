@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SHABBOS_LOCATIONS } from "@/lib/shabbos";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SHABBOS_LOCATIONS, LOCATION_REGIONS } from "@/lib/shabbos";
 import { MapPin, User, Heart, ChevronRight, CheckCircle, Users } from "lucide-react";
 
 interface OnboardingProps {
@@ -40,6 +40,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const [displayName, setDisplayName] = useState("");
   const [profileType, setProfileType] = useState("");
   const [shabbosCity, setShabbosCity] = useState("lakewood");
+  const [citySearch, setCitySearch] = useState("");
   const [bio, setBio] = useState("");
   const [hobbies, setHobbies] = useState("");
   const [growthGoals, setGrowthGoals] = useState("");
@@ -199,14 +200,34 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               </div>
               <div className="space-y-2">
                 <Label>Your City</Label>
+                <Input
+                  placeholder="Search cities..."
+                  value={citySearch}
+                  onChange={e => setCitySearch(e.target.value)}
+                  className="h-10"
+                />
                 <Select value={shabbosCity} onValueChange={setShabbosCity}>
                   <SelectTrigger className="h-12">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    {SHABBOS_LOCATIONS.map(loc => (
-                      <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
-                    ))}
+                  <SelectContent className="max-h-72">
+                    {citySearch.trim()
+                      ? SHABBOS_LOCATIONS
+                          .filter(l => l.name.toLowerCase().includes(citySearch.toLowerCase()))
+                          .map(loc => (
+                            <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                          ))
+                      : LOCATION_REGIONS.map(region => (
+                          <SelectGroup key={region}>
+                            <SelectLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground px-2 pt-2">
+                              {region}
+                            </SelectLabel>
+                            {SHABBOS_LOCATIONS.filter(l => l.region === region).map(loc => (
+                              <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                            ))}
+                          </SelectGroup>
+                        ))
+                    }
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground pt-1">You can change this anytime in Settings</p>

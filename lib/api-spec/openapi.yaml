@@ -418,6 +418,52 @@ paths:
         "401":
           description: Unauthorized
 
+  /notifications/{id}/accept:
+    post:
+      operationId: acceptNotification
+      tags: [notifications]
+      summary: Accept a tutor contact request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+        "404":
+          description: Notification not found
+
+  /notifications/{id}/decline:
+    post:
+      operationId: declineNotification
+      tags: [notifications]
+      summary: Decline a tutor contact request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Declined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+        "404":
+          description: Notification not found
+
   /learn-sessions:
     get:
       operationId: listLearnSessions
@@ -588,6 +634,8 @@ components:
         hobbies:
           type: ["string", "null"]
         growthGoals:
+          type: ["string", "null"]
+        zoomLink:
           type: ["string", "null"]
 
     FriendEntry:
@@ -796,6 +844,8 @@ components:
           type: ["string", "null"]
         isRead:
           type: boolean
+        status:
+          type: string
         fromUserId:
           type: ["string", "null"]
         fromName:
@@ -808,6 +858,7 @@ components:
         - type
         - title
         - isRead
+        - status
         - createdAt
 
     LearnSessionEntry:

@@ -100,6 +100,36 @@ export async function sendTutorContactEmail(
   }
 }
 
+// ── Tutor acceptance notification ──────────────────────────────────────────────
+
+export async function sendTutorAcceptEmail(
+  to: string,
+  requesterFirstName: string | null,
+  tutorName: string,
+  zoomLink: string | null
+) {
+  const client = getClient();
+  if (!client) return;
+  const name = requesterFirstName ? `, ${requesterFirstName}` : "";
+  try {
+    await client.emails.send({
+      from: FROM,
+      to,
+      subject: `${tutorName} accepted your learning request`,
+      html: base(`
+        ${h1(`Your request was accepted${name}`)}
+        ${p(`<strong style="color:#e8d5b0;">${tutorName}</strong> has accepted your learning request.`)}
+        ${zoomLink
+          ? highlight("Zoom Link", `<a href="${zoomLink}" style="color:#c9964a;">${zoomLink}</a>`) + p("Join at the agreed time. Hatzlacha!")
+          : p("They'll be in touch with session details. Keep an eye on your notifications.")}
+        ${btn("Open Btachon", `${APP_URL}/notifications`)}
+      `),
+    });
+  } catch (err) {
+    console.error("[email] tutor accept failed:", err);
+  }
+}
+
 // ── Welcome email ──────────────────────────────────────────────────────────────
 
 export async function sendWelcomeEmail(to: string, firstName: string | null) {

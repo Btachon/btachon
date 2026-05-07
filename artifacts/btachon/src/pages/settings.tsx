@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useTimeTracking } from "@/hooks/useTimeTracking";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,9 +9,10 @@ import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings as SettingsIcon, Trash2, Moon, MapPin, Instagram, ExternalLink, MessageCircle, Mail, Users } from "lucide-react";
+import { Settings as SettingsIcon, Trash2, Moon, MapPin, Instagram, ExternalLink, MessageCircle, Mail, Users, Video } from "lucide-react";
 import { useShabbos } from "@/hooks/useShabbos";
 import { SHABBOS_LOCATIONS, LOCATION_REGIONS, formatTimeInTz, formatRelative } from "@/lib/shabbos";
+import { useGetProfile, useUpsertProfile } from "@workspace/api-client-react";
 
 const PROFILE_OPTIONS = [
   { value: "teen_male",     label: "Teen — Boy",        sub: "Ages 13–17" },
@@ -28,6 +30,30 @@ export default function Settings() {
   const [partnerName, setPartnerName] = useLocalStorage("partnerName", "");
   const [isTutor, setIsTutor] = useLocalStorage("availableAsTutor", false);
   const [profileType, setProfileType] = useLocalStorage("btachon:profileType", "");
+
+  const { data: dbProfile } = useGetProfile();
+  const upsertProfile = useUpsertProfile();
+  const [zoomLink, setZoomLink] = useState("");
+  const [zoomSaved, setZoomSaved] = useState(false);
+
+  // Populate zoom link from DB profile once loaded
+  const profileZoomLink = (dbProfile as any)?.zoomLink ?? "";
+  const [zoomInit, setZoomInit] = useState(false);
+  if (!zoomInit && profileZoomLink) {
+    setZoomLink(profileZoomLink);
+    setZoomInit(true);
+  }
+
+  const handleSaveZoom = async () => {
+    try {
+      await upsertProfile.mutateAsync({ data: { zoomLink: zoomLink.trim() || null } });
+      setZoomSaved(true);
+      toast.success("Zoom link saved.");
+      setTimeout(() => setZoomSaved(false), 3000);
+    } catch {
+      toast.error("Could not save Zoom link.");
+    }
+  };
 
   const shabbos = useShabbos();
 
@@ -83,6 +109,33 @@ export default function Settings() {
                   <p className="text-xs text-muted-foreground mt-0.5">Receive learning requests</p>
                 </div>
                 <Switch checked={isTutor} onCheckedChange={setIsTutor} />
+              </div>
+            </div>
+
+            {/* Zoom Link */}
+            <div className="pt-2 border-t border-border/50">
+              <div className="flex items-center gap-2 mb-2">
+                <Video className="w-4 h-4 text-primary" />
+                <Label className="text-muted-foreground font-medium text-xs uppercase tracking-wider">Your Zoom Link</Label>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                When you accept a learning request, this link is automatically shared with the student.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={zoomLink}
+                  onChange={e => setZoomLink(e.target.value)}
+                  placeholder="https://zoom.us/j/your-meeting-id"
+                  className="bg-secondary/30 flex-1"
+                />
+                <Button
+                  onClick={handleSaveZoom}
+                  disabled={upsertProfile.isPending || zoomSaved}
+                  size="sm"
+                  className="shrink-0"
+                >
+                  {zoomSaved ? "Saved" : upsertProfile.isPending ? "Saving..." : "Save"}
+                </Button>
               </div>
             </div>
 

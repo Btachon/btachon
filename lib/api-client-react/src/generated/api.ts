@@ -1776,6 +1776,174 @@ export const useMarkAllNotificationsRead = <
 };
 
 /**
+ * @summary Accept a tutor contact request
+ */
+export const getAcceptNotificationUrl = (id: string) => {
+  return `/api/notifications/${id}/accept`;
+};
+
+export const acceptNotification = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getAcceptNotificationUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAcceptNotificationMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acceptNotification>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof acceptNotification>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["acceptNotification"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof acceptNotification>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return acceptNotification(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AcceptNotificationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof acceptNotification>>
+>;
+
+export type AcceptNotificationMutationError = ErrorType<void>;
+
+/**
+ * @summary Accept a tutor contact request
+ */
+export const useAcceptNotification = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acceptNotification>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof acceptNotification>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getAcceptNotificationMutationOptions(options));
+};
+
+/**
+ * @summary Decline a tutor contact request
+ */
+export const getDeclineNotificationUrl = (id: string) => {
+  return `/api/notifications/${id}/decline`;
+};
+
+export const declineNotification = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDeclineNotificationUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getDeclineNotificationMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof declineNotification>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof declineNotification>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["declineNotification"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof declineNotification>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return declineNotification(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeclineNotificationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof declineNotification>>
+>;
+
+export type DeclineNotificationMutationError = ErrorType<void>;
+
+/**
+ * @summary Decline a tutor contact request
+ */
+export const useDeclineNotification = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof declineNotification>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof declineNotification>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeclineNotificationMutationOptions(options));
+};
+
+/**
  * @summary List all learn sessions
  */
 export const getListLearnSessionsUrl = (params?: ListLearnSessionsParams) => {

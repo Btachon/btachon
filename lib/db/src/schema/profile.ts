@@ -10,6 +10,7 @@ export const userProfilesTable = pgTable("user_profiles", {
   bio: text("bio"),
   hobbies: text("hobbies"),
   growthGoals: text("growth_goals"),
+  zoomLink: varchar("zoom_link"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
@@ -51,6 +52,7 @@ export const notificationsTable = pgTable("notifications", {
   title: varchar("title").notNull(),
   body: text("body"),
   isRead: boolean("is_read").notNull().default(false),
+  status: varchar("status").notNull().default("none"),
   fromUserId: varchar("from_user_id").references(() => usersTable.id, { onDelete: "set null" }),
   fromName: varchar("from_name"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

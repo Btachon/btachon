@@ -3,6 +3,7 @@ import healthRouter from "./health";
 import authRouter from "./auth";
 import profileRouter from "./profile";
 import friendsRouter from "./friends";
+import friendRequestsRouter from "./friendRequests";
 import videosRouter from "./videos";
 import pulseRouter from "./pulse";
 
@@ -12,6 +13,7 @@ router.use(healthRouter);
 router.use(authRouter);
 router.use(profileRouter);
 router.use(friendsRouter);
+router.use(friendRequestsRouter);
 router.use(videosRouter);
 router.use(pulseRouter);
 

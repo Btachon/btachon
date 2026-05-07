@@ -173,6 +173,92 @@ paths:
         "401":
           description: Unauthorized
 
+  /friend-requests:
+    post:
+      operationId: sendFriendRequest
+      tags: [friends]
+      summary: Send a growth challenge or Tehillim request to a friend
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendFriendRequestBody"
+      responses:
+        "200":
+          description: Request sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendRequestEntry"
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+
+  /friend-requests/incoming:
+    get:
+      operationId: getIncomingFriendRequests
+      tags: [friends]
+      summary: Get pending incoming friend requests
+      responses:
+        "200":
+          description: List of incoming requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FriendRequestEntry"
+        "401":
+          description: Unauthorized
+
+  /friend-requests/outgoing:
+    get:
+      operationId: getOutgoingFriendRequests
+      tags: [friends]
+      summary: Get outgoing friend requests
+      responses:
+        "200":
+          description: List of outgoing requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FriendRequestEntry"
+        "401":
+          description: Unauthorized
+
+  /friend-requests/{requestId}:
+    patch:
+      operationId: respondToFriendRequest
+      tags: [friends]
+      summary: Accept or decline a friend request
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RespondToFriendRequestBody"
+      responses:
+        "200":
+          description: Updated request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendRequestEntry"
+        "401":
+          description: Unauthorized
+        "404":
+          description: Request not found
+
   /videos:
     get:
       operationId: listVideos
@@ -376,6 +462,66 @@ components:
           type: string
       required:
         - shareCode
+
+    SendFriendRequestBody:
+      type: object
+      properties:
+        toUserId:
+          type: string
+        type:
+          type: string
+          enum: [challenge, tehillim]
+        message:
+          type: ["string", "null"]
+      required:
+        - toUserId
+        - type
+
+    RespondToFriendRequestBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [accepted, declined]
+      required:
+        - status
+
+    FriendRequestEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        fromUserId:
+          type: string
+        toUserId:
+          type: string
+        type:
+          type: string
+        message:
+          type: ["string", "null"]
+        status:
+          type: string
+        createdAt:
+          type: string
+        fromDisplayName:
+          type: ["string", "null"]
+        fromFirstName:
+          type: ["string", "null"]
+        fromProfileImageUrl:
+          type: ["string", "null"]
+        toDisplayName:
+          type: ["string", "null"]
+        toFirstName:
+          type: ["string", "null"]
+        toProfileImageUrl:
+          type: ["string", "null"]
+      required:
+        - id
+        - fromUserId
+        - toUserId
+        - type
+        - status
+        - createdAt
 
     SuccessResponse:
       type: object

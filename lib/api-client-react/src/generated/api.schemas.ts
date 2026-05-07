@@ -89,6 +89,56 @@ export interface AddFriendBody {
   shareCode: string;
 }
 
+export type SendFriendRequestBodyType =
+  (typeof SendFriendRequestBodyType)[keyof typeof SendFriendRequestBodyType];
+
+export const SendFriendRequestBodyType = {
+  challenge: "challenge",
+  tehillim: "tehillim",
+} as const;
+
+export interface SendFriendRequestBody {
+  toUserId: string;
+  type: SendFriendRequestBodyType;
+  /** @nullable */
+  message?: string | null;
+}
+
+export type RespondToFriendRequestBodyStatus =
+  (typeof RespondToFriendRequestBodyStatus)[keyof typeof RespondToFriendRequestBodyStatus];
+
+export const RespondToFriendRequestBodyStatus = {
+  accepted: "accepted",
+  declined: "declined",
+} as const;
+
+export interface RespondToFriendRequestBody {
+  status: RespondToFriendRequestBodyStatus;
+}
+
+export interface FriendRequestEntry {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  type: string;
+  /** @nullable */
+  message?: string | null;
+  status: string;
+  createdAt: string;
+  /** @nullable */
+  fromDisplayName?: string | null;
+  /** @nullable */
+  fromFirstName?: string | null;
+  /** @nullable */
+  fromProfileImageUrl?: string | null;
+  /** @nullable */
+  toDisplayName?: string | null;
+  /** @nullable */
+  toFirstName?: string | null;
+  /** @nullable */
+  toProfileImageUrl?: string | null;
+}
+
 export interface SuccessResponse {
   success: boolean;
 }

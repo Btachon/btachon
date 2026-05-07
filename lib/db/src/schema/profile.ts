@@ -20,5 +20,15 @@ export const friendConnectionsTable = pgTable("friend_connections", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const friendRequestsTable = pgTable("friend_requests", {
+  id: varchar("id").primaryKey(),
+  fromUserId: varchar("from_user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  toUserId: varchar("to_user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  type: varchar("type").notNull(),
+  message: text("message"),
+  status: varchar("status").notNull().default("pending"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type UserProfile = typeof userProfilesTable.$inferSelect;
 export type UpsertUserProfile = typeof userProfilesTable.$inferInsert;

@@ -131,6 +131,102 @@ export const RemoveFriendResponse = zod.object({
 });
 
 /**
+ * @summary Send a growth challenge or Tehillim request to a friend
+ */
+export const SendFriendRequestBody = zod.object({
+  toUserId: zod.string(),
+  type: zod.enum(["challenge", "tehillim"]),
+  message: zod.string().nullish(),
+});
+
+export const SendFriendRequestResponse = zod.object({
+  id: zod.string(),
+  fromUserId: zod.string(),
+  toUserId: zod.string(),
+  type: zod.string(),
+  message: zod.string().nullish(),
+  status: zod.string(),
+  createdAt: zod.string(),
+  fromDisplayName: zod.string().nullish(),
+  fromFirstName: zod.string().nullish(),
+  fromProfileImageUrl: zod.string().nullish(),
+  toDisplayName: zod.string().nullish(),
+  toFirstName: zod.string().nullish(),
+  toProfileImageUrl: zod.string().nullish(),
+});
+
+/**
+ * @summary Get pending incoming friend requests
+ */
+export const GetIncomingFriendRequestsResponseItem = zod.object({
+  id: zod.string(),
+  fromUserId: zod.string(),
+  toUserId: zod.string(),
+  type: zod.string(),
+  message: zod.string().nullish(),
+  status: zod.string(),
+  createdAt: zod.string(),
+  fromDisplayName: zod.string().nullish(),
+  fromFirstName: zod.string().nullish(),
+  fromProfileImageUrl: zod.string().nullish(),
+  toDisplayName: zod.string().nullish(),
+  toFirstName: zod.string().nullish(),
+  toProfileImageUrl: zod.string().nullish(),
+});
+export const GetIncomingFriendRequestsResponse = zod.array(
+  GetIncomingFriendRequestsResponseItem,
+);
+
+/**
+ * @summary Get outgoing friend requests
+ */
+export const GetOutgoingFriendRequestsResponseItem = zod.object({
+  id: zod.string(),
+  fromUserId: zod.string(),
+  toUserId: zod.string(),
+  type: zod.string(),
+  message: zod.string().nullish(),
+  status: zod.string(),
+  createdAt: zod.string(),
+  fromDisplayName: zod.string().nullish(),
+  fromFirstName: zod.string().nullish(),
+  fromProfileImageUrl: zod.string().nullish(),
+  toDisplayName: zod.string().nullish(),
+  toFirstName: zod.string().nullish(),
+  toProfileImageUrl: zod.string().nullish(),
+});
+export const GetOutgoingFriendRequestsResponse = zod.array(
+  GetOutgoingFriendRequestsResponseItem,
+);
+
+/**
+ * @summary Accept or decline a friend request
+ */
+export const RespondToFriendRequestParams = zod.object({
+  requestId: zod.coerce.string(),
+});
+
+export const RespondToFriendRequestBody = zod.object({
+  status: zod.enum(["accepted", "declined"]),
+});
+
+export const RespondToFriendRequestResponse = zod.object({
+  id: zod.string(),
+  fromUserId: zod.string(),
+  toUserId: zod.string(),
+  type: zod.string(),
+  message: zod.string().nullish(),
+  status: zod.string(),
+  createdAt: zod.string(),
+  fromDisplayName: zod.string().nullish(),
+  fromFirstName: zod.string().nullish(),
+  fromProfileImageUrl: zod.string().nullish(),
+  toDisplayName: zod.string().nullish(),
+  toFirstName: zod.string().nullish(),
+  toProfileImageUrl: zod.string().nullish(),
+});
+
+/**
  * @summary List all videos
  */
 export const ListVideosQueryParams = zod.object({

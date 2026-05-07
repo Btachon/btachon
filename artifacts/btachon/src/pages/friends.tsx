@@ -10,12 +10,16 @@ import { toast } from "sonner";
 import { Users, UserPlus, Copy, Share2, Check, X, Mail, Link } from "lucide-react";
 import { useGetFriends, useAddFriendByCode, useRemoveFriend } from "@workspace/api-client-react";
 
+function getApiBase(): string {
+  return (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, "") ?? "";
+}
+
 function useProfile() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     const token = getStoredJwt();
-    fetch("/api/profile", {
+    fetch(`${getApiBase()}/api/profile`, {
       credentials: "include",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })

@@ -18,11 +18,15 @@ import { Users, UserPlus, MessageCircle, Send, Handshake, Check, Share2, Copy, M
 import { useGetFriends, useAddFriendByCode, useRemoveFriend } from "@workspace/api-client-react";
 import chevreHero from "@/assets/connect-hero.png";
 
+function getApiBase(): string {
+  return (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, "") ?? "";
+}
+
 function useProfile() {
   const [profile, setProfile] = useState<any>(null);
   useEffect(() => {
     const token = getStoredJwt();
-    fetch("/api/profile", {
+    fetch(`${getApiBase()}/api/profile`, {
       credentials: "include",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })

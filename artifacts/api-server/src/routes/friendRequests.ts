@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, friendRequestsTable, userProfilesTable, usersTable, friendConnectionsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import crypto from "crypto";
+import { sendChallengeEmail, sendTehillimEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -65,6 +66,19 @@ router.post("/friend-requests", async (req: Request, res: Response) => {
     .returning();
 
   const [from, to] = await Promise.all([getPersonInfo(req.user.id), getPersonInfo(toUserId)]);
+
+  // Fire-and-forget notification email to recipient
+  const recipientUser = await db.select().from(usersTable).where(eq(usersTable.id, toUserId)).limit(1);
+  const recipientEmail = recipientUser[0]?.email;
+  const fromName = from.displayName ?? from.firstName ?? "A friend";
+  if (recipientEmail) {
+    if (type === "challenge") {
+      sendChallengeEmail(recipientEmail, to.firstName, fromName, message ?? null).catch(() => {});
+    } else {
+      sendTehillimEmail(recipientEmail, to.firstName, fromName, message ?? null).catch(() => {});
+    }
+  }
+
   res.json(formatEntry(row, from, to));
 });
 
@@ -113,17 +127,18 @@ router.patch("/friend-requests/:requestId", async (req: Request, res: Response) 
     return;
   }
 
+  const requestId = String(req.params.requestId);
   const [existing] = await db
     .select()
     .from(friendRequestsTable)
-    .where(and(eq(friendRequestsTable.id, req.params.requestId), eq(friendRequestsTable.toUserId, req.user.id)));
+    .where(and(eq(friendRequestsTable.id, requestId), eq(friendRequestsTable.toUserId, req.user.id)));
 
   if (!existing) { res.status(404).json({ error: "Request not found" }); return; }
 
   const [row] = await db
     .update(friendRequestsTable)
     .set({ status })
-    .where(eq(friendRequestsTable.id, req.params.requestId))
+    .where(eq(friendRequestsTable.id, requestId))
     .returning();
 
   const [from, to] = await Promise.all([getPersonInfo(row.fromUserId), getPersonInfo(row.toUserId)]);

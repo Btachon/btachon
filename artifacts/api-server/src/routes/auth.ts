@@ -14,6 +14,7 @@ import {
   buildGoogleAuthUrl,
   exchangeGoogleCode,
 } from "../lib/auth";
+import { sendWelcomeEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -52,11 +53,9 @@ async function upsertGoogleUser(googleUser: {
   given_name?: string;
   family_name?: string;
   picture?: string;
-}) {
+}): Promise<{ user: typeof usersTable.$inferSelect; isNew: boolean }> {
   const id = `google_${googleUser.sub}`;
 
-  // Look up by email first — handles cases where an old/broken record
-  // already exists with that email (e.g. from a previous google_undefined bug)
   const existing = await db
     .select()
     .from(usersTable)
@@ -74,7 +73,7 @@ async function upsertGoogleUser(googleUser: {
       })
       .where(eq(usersTable.email, googleUser.email))
       .returning();
-    return user;
+    return { user, isNew: false };
   }
 
   const [user] = await db
@@ -97,7 +96,7 @@ async function upsertGoogleUser(googleUser: {
       },
     })
     .returning();
-  return user;
+  return { user, isNew: true };
 }
 
 function getGoogleCallbackUrl(req: Request): string {
@@ -176,6 +175,10 @@ router.post("/auth/signup", async (req: Request, res: Response) => {
   });
 
   setJwtCookie(res, token);
+  // Fire-and-forget welcome email — never block the response
+  if (user.email) {
+    sendWelcomeEmail(user.email, user.firstName ?? null).catch(() => {});
+  }
   res.json({ token });
 });
 
@@ -258,7 +261,7 @@ router.get("/auth/google/callback", async (req: Request, res: Response) => {
   try {
     const callbackUrl = getGoogleCallbackUrl(req);
     const googleUser = await exchangeGoogleCode(code, callbackUrl);
-    const dbUser = await upsertGoogleUser(googleUser);
+    const { user: dbUser, isNew } = await upsertGoogleUser(googleUser);
 
     const token = signJwt({
       id: dbUser.id,
@@ -267,6 +270,10 @@ router.get("/auth/google/callback", async (req: Request, res: Response) => {
       lastName: dbUser.lastName,
       profileImageUrl: dbUser.profileImageUrl,
     });
+
+    if (isNew && dbUser.email) {
+      sendWelcomeEmail(dbUser.email, dbUser.firstName ?? null).catch(() => {});
+    }
 
     setJwtCookie(res, token);
     res.redirect(`${frontendBase}/?token=${encodeURIComponent(token)}`);

@@ -118,12 +118,6 @@ router.post("/pulse/campaigns/:id/commit", async (req: Request, res: Response) =
     const activeCycle = currentCycleCommitments.length >= 150 ? maxCycle + 1 : maxCycle;
     const activeCommitments = activeCycle === maxCycle ? currentCycleCommitments : [];
 
-    const alreadyCommitted = commitments.find(c => c.userId === userId && c.cycle === activeCycle);
-    if (alreadyCommitted) {
-      res.status(409).json({ error: "Already committed", perekNumber: alreadyCommitted.perekNumber, cycle: activeCycle });
-      return;
-    }
-
     const claimed = new Set(activeCommitments.map(c => c.perekNumber));
     let nextPerek: number | null = null;
     for (let i = 1; i <= 150; i++) {

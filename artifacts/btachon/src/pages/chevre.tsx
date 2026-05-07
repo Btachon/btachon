@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { getStoredJwt } from "@workspace/replit-auth-web";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,11 @@ import chevreHero from "@/assets/connect-hero.png";
 function useProfile() {
   const [profile, setProfile] = useState<any>(null);
   useEffect(() => {
-    fetch("/api/profile", { credentials: "include" })
+    const token = getStoredJwt();
+    fetch("/api/profile", {
+      credentials: "include",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
       .then(r => r.ok ? r.json() : null)
       .then(d => setProfile(d))
       .catch(() => {});

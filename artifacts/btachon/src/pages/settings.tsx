@@ -7,10 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Settings as SettingsIcon, Trash2, Moon, MapPin, Instagram, ExternalLink, MessageCircle, Mail, Users } from "lucide-react";
 import { useShabbos } from "@/hooks/useShabbos";
-import { SHABBOS_LOCATIONS, formatTimeInTz, formatRelative } from "@/lib/shabbos";
+import { SHABBOS_LOCATIONS, LOCATION_REGIONS, formatTimeInTz, formatRelative } from "@/lib/shabbos";
 
 const PROFILE_OPTIONS = [
   { value: "teen_male",     label: "Teen — Boy",        sub: "Ages 13–17" },
@@ -136,9 +136,14 @@ export default function Settings() {
                   <SelectTrigger className="bg-secondary/30">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    {SHABBOS_LOCATIONS.map(l => (
-                      <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                  <SelectContent className="max-h-72">
+                    {LOCATION_REGIONS.map(region => (
+                      <SelectGroup key={region}>
+                        <SelectLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground px-2 pt-2">{region}</SelectLabel>
+                        {SHABBOS_LOCATIONS.filter(l => l.region === region).map(l => (
+                          <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                        ))}
+                      </SelectGroup>
                     ))}
                   </SelectContent>
                 </Select>

@@ -77,7 +77,10 @@ async function commitToPerek(campaignId: string): Promise<CommitResult> {
     }
     throw new Error(data.error ?? "Conflict");
   }
-  if (!res.ok) throw new Error("Failed to commit");
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error ?? `Failed to commit (${res.status})`);
+  }
   return res.json();
 }
 
@@ -122,20 +125,13 @@ function CampaignTypeLabel({ type }: { type: string }) {
 function CampaignCard({ campaign }: { campaign: Campaign }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [myPerek, setMyPerek] = useState<number | null>(null);
-  const [justCompleted, setJustCompleted] = useState(false);
+  const [myPerakim, setMyPerakim] = useState<number[]>([]);
 
   const commit = useMutation({
     mutationFn: () => commitToPerek(campaign.id),
     onSuccess: (data: any) => {
-      if (data.alreadyCommitted) {
-        setMyPerek(data.perekNumber);
-        toast.info(`You already have Perek ${data.perekNumber} for this campaign.`);
-        return;
-      }
-      setMyPerek(data.perekNumber);
+      setMyPerakim((prev) => [...prev, data.perekNumber]);
       if (data.bookComplete) {
-        setJustCompleted(true);
         toast.success("Seyag l'Torah! The whole Sefer Tehillim is covered.", {
           description: "Cycle 2 begins. Keep going!",
         });
@@ -154,9 +150,10 @@ function CampaignCard({ campaign }: { campaign: Campaign }) {
   const isYahrzeit = campaign.campaignType === "yahrzeit";
   const borderClass = isYahrzeit ? "hover:border-amber-400/40" : "hover:border-rose-400/40";
   const activeBorder = isYahrzeit ? "border-amber-400/30 bg-amber-400/5" : "border-rose-400/30 bg-rose-400/5";
+  const hasCommitted = myPerakim.length > 0;
 
   return (
-    <Card className={`border-border shadow-sm transition-colors ${myPerek ? activeBorder : `bg-card ${borderClass}`}`}>
+    <Card className={`border-border shadow-sm transition-colors ${hasCommitted ? activeBorder : `bg-card ${borderClass}`}`}>
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start gap-3">
           <div className="space-y-1 flex-1 min-w-0">
@@ -176,36 +173,43 @@ function CampaignCard({ campaign }: { campaign: Campaign }) {
       </CardHeader>
       <CardContent className="pb-4 space-y-3">
         <PerekProgress claimed={campaign.claimedCount} cycle={campaign.cycle} />
-        {myPerek && (
+        {hasCommitted && (
           <AnimatePresence>
             <motion.div
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 text-sm font-semibold bg-secondary/40 border border-border/50 rounded-lg px-3 py-2"
+              className="flex items-start gap-2 text-sm font-semibold bg-secondary/40 border border-border/50 rounded-lg px-3 py-2"
             >
-              <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
-              <span>Your assignment: <span className="text-primary">Perek {myPerek}</span></span>
+              <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <span>
+                Your perakim:{" "}
+                <span className="text-primary">
+                  {myPerakim.sort((a, b) => a - b).join(", ")}
+                </span>
+              </span>
             </motion.div>
           </AnimatePresence>
         )}
       </CardContent>
-      <CardFooter>
-        {myPerek ? (
-          <div className="w-full flex items-center justify-center gap-2 text-sm text-muted-foreground font-medium py-1">
-            <Heart className="w-4 h-4 text-primary fill-primary" /> Tizku l'mitzvos
+      <CardFooter className="flex flex-col gap-2">
+        <Button
+          className="w-full font-semibold"
+          variant={hasCommitted ? "secondary" : "default"}
+          disabled={!user || commit.isPending}
+          onClick={() => commit.mutate()}
+        >
+          {commit.isPending ? (
+            <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Assigning...</>
+          ) : hasCommitted ? (
+            <><BookOpen className="w-4 h-4 mr-2" /> Take Another Perek</>
+          ) : (
+            <><BookOpen className="w-4 h-4 mr-2" /> Commit — Get My Perek</>
+          )}
+        </Button>
+        {hasCommitted && (
+          <div className="w-full flex items-center justify-center gap-2 text-xs text-muted-foreground font-medium">
+            <Heart className="w-3.5 h-3.5 text-primary fill-primary" /> Tizku l'mitzvos
           </div>
-        ) : (
-          <Button
-            className="w-full font-semibold"
-            disabled={!user || commit.isPending}
-            onClick={() => commit.mutate()}
-          >
-            {commit.isPending ? (
-              <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Assigning...</>
-            ) : (
-              <><BookOpen className="w-4 h-4 mr-2" /> Commit — Get My Perek</>
-            )}
-          </Button>
         )}
       </CardFooter>
     </Card>

@@ -1,4 +1,4 @@
-import { pgTable, varchar, boolean, timestamp, text } from "drizzle-orm/pg-core";
+import { pgTable, varchar, boolean, timestamp, text, integer } from "drizzle-orm/pg-core";
 import { usersTable } from "./auth";
 
 export const userProfilesTable = pgTable("user_profiles", {
@@ -41,6 +41,35 @@ export const tutorsTable = pgTable("tutors", {
   profileImageUrl: varchar("profile_image_url"),
   isAvailable: boolean("is_available").notNull().default(true),
   isFeatured: boolean("is_featured").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const notificationsTable = pgTable("notifications", {
+  id: varchar("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  type: varchar("type").notNull(),
+  title: varchar("title").notNull(),
+  body: text("body"),
+  isRead: boolean("is_read").notNull().default(false),
+  fromUserId: varchar("from_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+  fromName: varchar("from_name"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const learnSessionsTable = pgTable("learn_sessions", {
+  id: varchar("id").primaryKey(),
+  hostUserId: varchar("host_user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  type: varchar("type").notNull(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  topic: varchar("topic"),
+  level: varchar("level").notNull().default("All"),
+  format: varchar("format").notNull().default("peer"),
+  date: varchar("date"),
+  time: varchar("time"),
+  duration: varchar("duration"),
+  capacity: integer("capacity").notNull().default(10),
+  hostName: varchar("host_name").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

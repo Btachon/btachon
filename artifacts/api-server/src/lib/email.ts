@@ -71,6 +71,35 @@ function highlight(label: string, value: string): string {
   </div>`;
 }
 
+// ── Tutor contact notification ─────────────────────────────────────────────────
+
+export async function sendTutorContactEmail(
+  to: string,
+  tutorFirstName: string | null,
+  fromName: string,
+  message: string
+) {
+  const client = getClient();
+  if (!client) return;
+  const name = tutorFirstName ? `, ${tutorFirstName}` : "";
+  try {
+    await client.emails.send({
+      from: FROM,
+      to,
+      subject: `${fromName} wants to learn with you`,
+      html: base(`
+        ${h1(`Someone wants to learn with you${name}`)}
+        ${p(`<strong style="color:#e8d5b0;">${fromName}</strong> found your tutor listing and wants to connect.`)}
+        ${highlight("Their message", message)}
+        ${p("Open the app to view their profile and reply.")}
+        ${btn("View on Btachon", `${APP_URL}/learn`)}
+      `),
+    });
+  } catch (err) {
+    console.error("[email] tutor contact failed:", err);
+  }
+}
+
 // ── Welcome email ──────────────────────────────────────────────────────────────
 
 export async function sendWelcomeEmail(to: string, firstName: string | null) {

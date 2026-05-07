@@ -7,6 +7,8 @@ import friendRequestsRouter from "./friendRequests";
 import tutorsRouter from "./tutors";
 import videosRouter from "./videos";
 import pulseRouter from "./pulse";
+import notificationsRouter from "./notifications";
+import learnSessionsRouter from "./learnSessions";
 
 const router: IRouter = Router();
 
@@ -18,5 +20,7 @@ router.use(friendRequestsRouter);
 router.use(tutorsRouter);
 router.use(videosRouter);
 router.use(pulseRouter);
+router.use(notificationsRouter);
+router.use(learnSessionsRouter);
 
 export default router;

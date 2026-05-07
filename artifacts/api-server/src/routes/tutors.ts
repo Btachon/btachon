@@ -1,7 +1,8 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { db, tutorsTable } from "@workspace/db";
+import { db, tutorsTable, notificationsTable, userProfilesTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
+import { sendTutorContactEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -58,6 +59,48 @@ router.post("/tutors", async (req: Request, res: Response) => {
 router.delete("/tutors/me", async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   await db.delete(tutorsTable).where(eq(tutorsTable.userId, req.user.id));
+  res.json({ success: true });
+});
+
+router.post("/tutors/:tutorId/contact", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const tutorId = String(req.params.tutorId);
+  const { message } = req.body as { message?: string };
+
+  if (!message?.trim()) {
+    res.status(400).json({ error: "message is required" });
+    return;
+  }
+
+  const [tutor] = await db.select().from(tutorsTable).where(eq(tutorsTable.id, tutorId));
+  if (!tutor) { res.status(404).json({ error: "Tutor not found" }); return; }
+
+  // Get sender's display name
+  const [senderProfile] = await db.select().from(userProfilesTable).where(eq(userProfilesTable.userId, req.user.id));
+  const [senderUser] = await db.select().from(usersTable).where(eq(usersTable.id, req.user.id));
+  const senderName = senderProfile?.displayName ?? senderUser?.firstName ?? req.user.email ?? "A user";
+
+  // Create in-app notification for the tutor if they have an account
+  if (tutor.userId) {
+    const notifId = crypto.randomBytes(10).toString("hex");
+    await db.insert(notificationsTable).values({
+      id: notifId,
+      userId: tutor.userId,
+      type: "tutor_contact",
+      title: `${senderName} wants to learn with you`,
+      body: message.slice(0, 300),
+      fromUserId: req.user.id,
+      fromName: senderName,
+    });
+
+    // Send email notification if the tutor has an email
+    const [tutorUser] = await db.select().from(usersTable).where(eq(usersTable.id, tutor.userId));
+    if (tutorUser?.email) {
+      sendTutorContactEmail(tutorUser.email, tutorUser.firstName ?? null, senderName, message).catch(() => {});
+    }
+  }
+
   res.json({ success: true });
 });
 

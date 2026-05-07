@@ -4,6 +4,7 @@ import { Home, BookOpen, Users, Activity, Settings, Menu, LogOut, Flame, ShieldA
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ShabbosBanner } from "@/components/ShabbosBanner";
+import { NotificationBell } from "@/components/NotificationBell";
 import { useAuth } from "@workspace/replit-auth-web";
 
 const NAV_ITEMS = [
@@ -45,9 +46,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 flex-col border-r border-border bg-card">
-        <div className="p-6 border-b border-border/50">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Btachon</h1>
-          <p className="text-xs text-muted-foreground mt-1">Trust. Connect. Grow.</p>
+        <div className="p-6 border-b border-border/50 flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Btachon</h1>
+            <p className="text-xs text-muted-foreground mt-1">Trust. Connect. Grow.</p>
+          </div>
+          <NotificationBell />
         </div>
 
         <nav className="flex-1 px-4 space-y-1 mt-4 overflow-y-auto">
@@ -87,12 +91,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex flex-col min-h-screen pb-16 md:pb-0">
         <header className="md:hidden flex items-center justify-between p-4 border-b border-border bg-card">
           <h1 className="text-xl font-bold tracking-tight text-foreground">Btachon</h1>
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-muted-foreground">
-                <Menu className="w-6 h-6" />
-              </Button>
-            </SheetTrigger>
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-muted-foreground">
+                  <Menu className="w-6 h-6" />
+                </Button>
+              </SheetTrigger>
             <SheetContent side="right" className="w-64 bg-card border-l-border p-0 flex flex-col">
               <div className="p-6 border-b border-border/50">
                 <h2 className="text-xl font-bold text-foreground">Btachon</h2>
@@ -118,7 +124,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </Button>
               </div>
             </SheetContent>
-          </Sheet>
+            </Sheet>
+          </div>
         </header>
 
         <main className="flex-1 overflow-auto">

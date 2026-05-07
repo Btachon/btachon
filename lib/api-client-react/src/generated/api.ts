@@ -18,6 +18,8 @@ import type {
 
 import type {
   AddFriendBody,
+  ContactTutorBody,
+  CreateLearnSessionBody,
   CreateVideoBody,
   ExchangeMobileAuthorizationCodeBody,
   ExchangeMobileAuthorizationCodeResponse,
@@ -25,8 +27,11 @@ import type {
   FriendRequestEntry,
   GetCurrentAuthUserResponse,
   HealthStatus,
+  LearnSessionEntry,
+  ListLearnSessionsParams,
   ListVideosParams,
   LogoutMobileSessionResponse,
+  NotificationEntry,
   RegisterAsTutorBody,
   RespondToFriendRequestBody,
   SendFriendRequestBody,
@@ -1525,6 +1530,432 @@ export const useRemoveTutorListing = <
   TContext
 > => {
   return useMutation(getRemoveTutorListingMutationOptions(options));
+};
+
+/**
+ * @summary Send a contact message to a tutor
+ */
+export const getContactTutorUrl = (tutorId: string) => {
+  return `/api/tutors/${tutorId}/contact`;
+};
+
+export const contactTutor = async (
+  tutorId: string,
+  contactTutorBody: ContactTutorBody,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getContactTutorUrl(tutorId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(contactTutorBody),
+  });
+};
+
+export const getContactTutorMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof contactTutor>>,
+    TError,
+    { tutorId: string; data: BodyType<ContactTutorBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof contactTutor>>,
+  TError,
+  { tutorId: string; data: BodyType<ContactTutorBody> },
+  TContext
+> => {
+  const mutationKey = ["contactTutor"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof contactTutor>>,
+    { tutorId: string; data: BodyType<ContactTutorBody> }
+  > = (props) => {
+    const { tutorId, data } = props ?? {};
+
+    return contactTutor(tutorId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ContactTutorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof contactTutor>>
+>;
+export type ContactTutorMutationBody = BodyType<ContactTutorBody>;
+export type ContactTutorMutationError = ErrorType<void>;
+
+/**
+ * @summary Send a contact message to a tutor
+ */
+export const useContactTutor = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof contactTutor>>,
+    TError,
+    { tutorId: string; data: BodyType<ContactTutorBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof contactTutor>>,
+  TError,
+  { tutorId: string; data: BodyType<ContactTutorBody> },
+  TContext
+> => {
+  return useMutation(getContactTutorMutationOptions(options));
+};
+
+/**
+ * @summary Get the current user's notifications
+ */
+export const getListNotificationsUrl = () => {
+  return `/api/notifications`;
+};
+
+export const listNotifications = async (
+  options?: RequestInit,
+): Promise<NotificationEntry[]> => {
+  return customFetch<NotificationEntry[]>(getListNotificationsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListNotificationsQueryKey = () => {
+  return [`/api/notifications`] as const;
+};
+
+export const getListNotificationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listNotifications>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listNotifications>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListNotificationsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listNotifications>>
+  > = ({ signal }) => listNotifications({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listNotifications>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListNotificationsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listNotifications>>
+>;
+export type ListNotificationsQueryError = ErrorType<void>;
+
+/**
+ * @summary Get the current user's notifications
+ */
+
+export function useListNotifications<
+  TData = Awaited<ReturnType<typeof listNotifications>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listNotifications>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListNotificationsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Mark all notifications as read
+ */
+export const getMarkAllNotificationsReadUrl = () => {
+  return `/api/notifications/read-all`;
+};
+
+export const markAllNotificationsRead = async (
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getMarkAllNotificationsReadUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getMarkAllNotificationsReadMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markAllNotificationsRead>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markAllNotificationsRead>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["markAllNotificationsRead"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markAllNotificationsRead>>,
+    void
+  > = () => {
+    return markAllNotificationsRead(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkAllNotificationsReadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markAllNotificationsRead>>
+>;
+
+export type MarkAllNotificationsReadMutationError = ErrorType<void>;
+
+/**
+ * @summary Mark all notifications as read
+ */
+export const useMarkAllNotificationsRead = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markAllNotificationsRead>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof markAllNotificationsRead>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getMarkAllNotificationsReadMutationOptions(options));
+};
+
+/**
+ * @summary List all learn sessions
+ */
+export const getListLearnSessionsUrl = (params?: ListLearnSessionsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/learn-sessions?${stringifiedParams}`
+    : `/api/learn-sessions`;
+};
+
+export const listLearnSessions = async (
+  params?: ListLearnSessionsParams,
+  options?: RequestInit,
+): Promise<LearnSessionEntry[]> => {
+  return customFetch<LearnSessionEntry[]>(getListLearnSessionsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListLearnSessionsQueryKey = (
+  params?: ListLearnSessionsParams,
+) => {
+  return [`/api/learn-sessions`, ...(params ? [params] : [])] as const;
+};
+
+export const getListLearnSessionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listLearnSessions>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListLearnSessionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listLearnSessions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListLearnSessionsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listLearnSessions>>
+  > = ({ signal }) => listLearnSessions(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listLearnSessions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListLearnSessionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listLearnSessions>>
+>;
+export type ListLearnSessionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all learn sessions
+ */
+
+export function useListLearnSessions<
+  TData = Awaited<ReturnType<typeof listLearnSessions>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListLearnSessionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listLearnSessions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListLearnSessionsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a learn session
+ */
+export const getCreateLearnSessionUrl = () => {
+  return `/api/learn-sessions`;
+};
+
+export const createLearnSession = async (
+  createLearnSessionBody: CreateLearnSessionBody,
+  options?: RequestInit,
+): Promise<LearnSessionEntry> => {
+  return customFetch<LearnSessionEntry>(getCreateLearnSessionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createLearnSessionBody),
+  });
+};
+
+export const getCreateLearnSessionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLearnSession>>,
+    TError,
+    { data: BodyType<CreateLearnSessionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createLearnSession>>,
+  TError,
+  { data: BodyType<CreateLearnSessionBody> },
+  TContext
+> => {
+  const mutationKey = ["createLearnSession"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createLearnSession>>,
+    { data: BodyType<CreateLearnSessionBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createLearnSession(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateLearnSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createLearnSession>>
+>;
+export type CreateLearnSessionMutationBody = BodyType<CreateLearnSessionBody>;
+export type CreateLearnSessionMutationError = ErrorType<void>;
+
+/**
+ * @summary Create a learn session
+ */
+export const useCreateLearnSession = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLearnSession>>,
+    TError,
+    { data: BodyType<CreateLearnSessionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createLearnSession>>,
+  TError,
+  { data: BodyType<CreateLearnSessionBody> },
+  TContext
+> => {
+  return useMutation(getCreateLearnSessionMutationOptions(options));
 };
 
 /**

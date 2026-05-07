@@ -14,7 +14,16 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { BookOpen, Video, Users, UserPlus, MicOff, PhoneOff, Users2, Sparkles, MapPin, Globe, ArrowLeft, ArrowRight, GraduationCap, School, Play, Clock, Bookmark, BookmarkCheck, X, Star } from "lucide-react";
 import { WATCH_VIDEOS, VIDEO_CATEGORIES, type WatchVideo, type VideoCategory } from "@/data/watchVideos";
-import { useListTutors, useRegisterAsTutor, useRemoveTutorListing } from "@workspace/api-client-react";
+import {
+  useListTutors,
+  useRegisterAsTutor,
+  useRemoveTutorListing,
+  useContactTutor,
+  useListLearnSessions,
+  useCreateLearnSession,
+  getListLearnSessionsQueryKey,
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 
 import heroLearn from "@/assets/hero-learn.png";
@@ -73,14 +82,16 @@ export default function Learn() {
     return matchCat && matchTab;
   });
 
-  const [chavrusaRequests, setChavrusaRequests] = useLocalStorage<any[]>("chavrusaRequests", []);
   const [lishmaRegistrations, setLishmaRegistrations] = useLocalStorage<any[]>("lishmaRegistrations", []);
-  const [hostedSessions, setHostedSessions] = useLocalStorage<any[]>("hostedSessions", []);
   const [sessionSuggestions, setSessionSuggestions] = useLocalStorage<any[]>("sessionSuggestions", []);
+  const qc = useQueryClient();
 
   const { data: tutorList = [], isLoading: tutorsLoading, refetch: refetchTutors } = useListTutors();
   const registerAsTutor = useRegisterAsTutor();
   const removeTutorListing = useRemoveTutorListing();
+  const contactTutor = useContactTutor();
+  const { data: allSessions = [], isLoading: sessionsLoading, refetch: refetchSessions } = useListLearnSessions();
+  const createLearnSession = useCreateLearnSession();
   const [becomeTutorOpen, setBecomeTutorOpen] = useState(false);
 
   const dbTutors = tutorList as any[];
@@ -130,12 +141,18 @@ export default function Learn() {
     }
   };
 
-  const handleRequestChavrusa = (e: React.FormEvent<HTMLFormElement>, tutorId: string) => {
+  const handleRequestChavrusa = async (e: React.FormEvent<HTMLFormElement>, tutorId: string) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    setChavrusaRequests([...chavrusaRequests, { id: Date.now(), tutorId, message: formData.get("message") as string }]);
-    toast.success("Message sent!", { description: "They will review your request and get back to you." });
-    document.getElementById(`close-chavrusa-${tutorId}`)?.click();
+    const message = formData.get("message") as string;
+    try {
+      await contactTutor.mutateAsync({ tutorId, data: { message } });
+      toast.success("Message sent!", { description: "They'll get a notification and email." });
+      (e.target as HTMLFormElement).reset();
+      document.getElementById(`close-chavrusa-${tutorId}`)?.click();
+    } catch {
+      toast.error("Could not send message");
+    }
   };
 
   const handleRegisterLishma = (session: any) => {
@@ -144,22 +161,28 @@ export default function Learn() {
     toast.success(`Registered for ${session.title}`, { description: "We'll send you a reminder." });
   };
 
-  const handleHostSession = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleHostSession = async (e: React.FormEvent<HTMLFormElement>, type: "lishma" | "study") => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    setHostedSessions([...hostedSessions, {
-      id: `hs_${Date.now()}`,
-      title: formData.get("topic") as string,
-      host: "You", hostAvatar: "Y",
-      date: `${formData.get("date")} at ${formData.get("time")}`,
-      duration: formData.get("duration") as string,
-      level: formData.get("level") as string,
-      registered: 1,
-      capacity: parseInt(formData.get("capacity") as string),
-      topic: formData.get("topic") as string,
-    }]);
-    toast.success("Session Scheduled", { description: "Your session is now live on the board." });
-    (e.target as HTMLFormElement).reset();
+    try {
+      await createLearnSession.mutateAsync({ data: {
+        type,
+        title: (formData.get("topic") || formData.get("title")) as string,
+        description: formData.get("description") as string || undefined,
+        topic: formData.get("topic") as string || undefined,
+        level: formData.get("level") as string || "All",
+        format: formData.get("format") as string || "peer",
+        date: formData.get("date") as string || undefined,
+        time: formData.get("time") as string || undefined,
+        duration: formData.get("duration") as string || undefined,
+        capacity: parseInt((formData.get("capacity") as string) || "10"),
+      }});
+      toast.success("Session created", { description: "Your session is now live on the board." });
+      (e.target as HTMLFormElement).reset();
+      qc.invalidateQueries({ queryKey: getListLearnSessionsQueryKey() });
+    } catch {
+      toast.error("Could not create session");
+    }
   };
 
   const handleSuggestSession = (e: React.FormEvent<HTMLFormElement>) => {
@@ -174,8 +197,10 @@ export default function Learn() {
     document.getElementById("close-suggest-session")?.click();
   };
 
-  const safeHosted = Array.isArray(hostedSessions) ? hostedSessions : [];
-  const filteredLishma = safeHosted.filter(
+  const sessions = Array.isArray(allSessions) ? (allSessions as any[]) : [];
+  const lishmaSessionsAll = sessions.filter((s) => s.type === "lishma");
+  const studySessionsAll = sessions.filter((s) => s.type === "study");
+  const filteredLishma = lishmaSessionsAll.filter(
     (s) => levelFilter === "All" || s.level === levelFilter || s.level === "All"
   );
 
@@ -565,7 +590,7 @@ export default function Learn() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <form onSubmit={handleHostSession} className="space-y-6">
+                    <form onSubmit={(e) => handleHostSession(e, "lishma")} className="space-y-6">
                       <div className="space-y-2">
                         <Label>Topic / Title</Label>
                         <Input name="topic" required placeholder="e.g. Overview of Hilchos Shabbos" className="bg-secondary/20 h-12" />
@@ -612,7 +637,9 @@ export default function Learn() {
                           </Select>
                         </div>
                       </div>
-                      <Button type="submit" size="lg" className="w-full text-lg h-14 mt-4">Create Session</Button>
+                      <Button type="submit" size="lg" className="w-full text-lg h-14 mt-4" disabled={createLearnSession.isPending}>
+                        {createLearnSession.isPending ? "Creating..." : "Create Session"}
+                      </Button>
                     </form>
                   </CardContent>
                 </Card>
@@ -632,20 +659,20 @@ export default function Learn() {
             className="p-4 md:p-8 space-y-8 max-w-6xl mx-auto"
           >
             {/* Hosted sessions submitted by real users */}
-            {safeHosted.length > 0 ? (
+            {studySessionsAll.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {safeHosted.map((session: any) => (
+                {studySessionsAll.map((session: any) => (
                   <Card key={session.id} className="border-border transition-colors shadow-sm bg-card hover:border-primary/50">
                     <CardContent className="p-6 flex flex-col h-full">
                       <div className="flex justify-between items-start mb-4">
                         <Badge variant="secondary">{session.level}</Badge>
                       </div>
                       <h4 className="font-bold text-xl mb-1">{session.title}</h4>
-                      <p className="text-sm text-muted-foreground mb-2">Host: {session.host}</p>
-                      <p className="text-xs text-muted-foreground mb-6">{session.date}</p>
+                      <p className="text-sm text-muted-foreground mb-2">Host: {session.hostName}</p>
+                      <p className="text-xs text-muted-foreground mb-6">{session.date}{session.time ? ` at ${session.time}` : ""}</p>
                       <div className="mt-auto pt-4 border-t border-border/50 flex items-center justify-between">
                         <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                          <Users className="w-3.5 h-3.5" /> {session.registered}/{session.capacity}
+                          <Users className="w-3.5 h-3.5" /> {session.capacity} spots
                         </span>
                         <Button variant="outline" size="sm" onClick={() => toast.success("Registered!", { description: "You'll receive a reminder closer to the time." })}>
                           Register
@@ -663,7 +690,78 @@ export default function Learn() {
               </div>
             )}
 
-            <div className="flex justify-center mt-10">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mt-10">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button>Host a Study Session</Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Host a Study Session</DialogTitle>
+                    <DialogDescription>Anyone can host — tutor-led or peer discussion.</DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={(e) => handleHostSession(e, "study")} className="space-y-4 pt-2">
+                    <div className="space-y-2">
+                      <Label>Topic / Title</Label>
+                      <Input name="topic" required placeholder="e.g. Intro to Mishnah Brachos" className="bg-secondary/20" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Date</Label>
+                        <Input name="date" type="date" className="bg-secondary/20" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Time</Label>
+                        <Input name="time" type="time" className="bg-secondary/20" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Duration</Label>
+                        <Select name="duration" defaultValue="45 min">
+                          <SelectTrigger className="bg-secondary/20"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="30 min">30 min</SelectItem>
+                            <SelectItem value="45 min">45 min</SelectItem>
+                            <SelectItem value="60 min">60 min</SelectItem>
+                            <SelectItem value="90 min">90 min</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Level</Label>
+                        <Select name="level" defaultValue="All">
+                          <SelectTrigger className="bg-secondary/20"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="All">All Levels</SelectItem>
+                            <SelectItem value="Beginner">Beginner</SelectItem>
+                            <SelectItem value="Intermediate">Intermediate</SelectItem>
+                            <SelectItem value="Advanced">Advanced</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Format</Label>
+                        <Select name="format" defaultValue="peer">
+                          <SelectTrigger className="bg-secondary/20"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="tutor">Tutor-led</SelectItem>
+                            <SelectItem value="peer">Peer-led</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Max Participants</Label>
+                        <Input name="capacity" type="number" defaultValue="20" className="bg-secondary/20" />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit" disabled={createLearnSession.isPending}>
+                        {createLearnSession.isPending ? "Creating..." : "Create Session"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
               <Dialog>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="border-dashed">Suggest a Study Session</Button>

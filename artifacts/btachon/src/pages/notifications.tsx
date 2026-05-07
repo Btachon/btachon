@@ -63,6 +63,17 @@ function typeColor(type: string) {
   return "bg-primary/10 text-primary";
 }
 
+function extractUrl(text: string | null | undefined): string | null {
+  if (!text) return null;
+  const match = text.match(/https?:\/\/[^\s]+/);
+  return match ? match[0] : null;
+}
+
+function bodyWithoutUrl(text: string | null | undefined, url: string | null): string {
+  if (!text || !url) return text ?? "";
+  return text.replace(url, "").replace("Join here:", "").replace(/\s{2,}/g, " ").trim();
+}
+
 function NotificationCard({ n, onAccept, onDecline, acting }: {
   n: any;
   onAccept: (id: string) => void;
@@ -70,10 +81,14 @@ function NotificationCard({ n, onAccept, onDecline, acting }: {
   acting: string | null;
 }) {
   const isTutorRequest = n.type === "tutor_contact";
+  const isTutorAccepted = n.type === "tutor_accepted";
   const isPending = isTutorRequest && (n.status === "none" || n.status === "pending" || !n.status);
   const isAccepted = n.status === "accepted";
   const isDeclined = n.status === "declined";
   const isActing = acting === n.id;
+
+  const zoomUrl = isTutorAccepted ? extractUrl(n.body) : null;
+  const cleanBody = zoomUrl ? bodyWithoutUrl(n.body, zoomUrl) : n.body;
 
   return (
     <div
@@ -88,13 +103,26 @@ function NotificationCard({ n, onAccept, onDecline, acting }: {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold leading-snug text-foreground">{n.title}</p>
-        {n.body && (
-          <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">{n.body}</p>
+        {cleanBody && (
+          <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">{cleanBody}</p>
         )}
         {n.fromName && !n.body?.includes(n.fromName) && (
           <p className="text-xs text-muted-foreground/70 mt-1">From {n.fromName}</p>
         )}
         <p className="text-[11px] text-muted-foreground/50 mt-1">{timeAgo(n.createdAt)}</p>
+
+        {/* Zoom link button for accepted tutor notifications */}
+        {zoomUrl && (
+          <a href={zoomUrl} target="_blank" rel="noopener noreferrer">
+            <Button size="sm" className="mt-3 h-8 gap-1.5">
+              <Video className="w-3.5 h-3.5" />
+              Join Zoom Session
+            </Button>
+          </a>
+        )}
+        {isTutorAccepted && !zoomUrl && (
+          <p className="text-xs text-muted-foreground mt-2">The tutor will be in touch with session details.</p>
+        )}
 
         {/* Accept / Decline buttons for pending tutor contact requests */}
         {isPending && (
@@ -121,11 +149,11 @@ function NotificationCard({ n, onAccept, onDecline, acting }: {
           </div>
         )}
 
-        {/* Status badges */}
+        {/* Status badge for tutor after they accepted */}
         {isAccepted && (
           <div className="flex items-center gap-1.5 mt-2">
             <Check className="w-3 h-3 text-primary" />
-            <span className="text-xs font-medium text-primary">Accepted — Zoom link sent</span>
+            <span className="text-xs font-medium text-primary">Accepted — Zoom link sent to student</span>
           </div>
         )}
         {isDeclined && (

@@ -156,6 +156,32 @@ export interface VideoEntry {
   createdAt?: string;
 }
 
+export interface TutorEntry {
+  id: string;
+  /** @nullable */
+  userId?: string | null;
+  displayName: string;
+  /** @nullable */
+  bio?: string | null;
+  subjects: string;
+  languages: string;
+  availability: string;
+  /** @nullable */
+  profileImageUrl?: string | null;
+  isAvailable: boolean;
+  isFeatured: boolean;
+  createdAt: string;
+}
+
+export interface RegisterAsTutorBody {
+  displayName: string;
+  /** @nullable */
+  bio?: string | null;
+  subjects: string;
+  languages: string;
+  availability: string;
+}
+
 export interface CreateVideoBody {
   id: string;
   title: string;

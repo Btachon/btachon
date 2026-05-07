@@ -27,9 +27,11 @@ import type {
   HealthStatus,
   ListVideosParams,
   LogoutMobileSessionResponse,
+  RegisterAsTutorBody,
   RespondToFriendRequestBody,
   SendFriendRequestBody,
   SuccessResponse,
+  TutorEntry,
   UpsertProfileBody,
   UserProfile,
   VideoEntry,
@@ -1281,6 +1283,248 @@ export const useCreateVideo = <
   TContext
 > => {
   return useMutation(getCreateVideoMutationOptions(options));
+};
+
+/**
+ * @summary List all available tutors
+ */
+export const getListTutorsUrl = () => {
+  return `/api/tutors`;
+};
+
+export const listTutors = async (
+  options?: RequestInit,
+): Promise<TutorEntry[]> => {
+  return customFetch<TutorEntry[]>(getListTutorsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListTutorsQueryKey = () => {
+  return [`/api/tutors`] as const;
+};
+
+export const getListTutorsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTutors>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listTutors>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListTutorsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listTutors>>> = ({
+    signal,
+  }) => listTutors({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listTutors>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListTutorsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listTutors>>
+>;
+export type ListTutorsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all available tutors
+ */
+
+export function useListTutors<
+  TData = Awaited<ReturnType<typeof listTutors>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listTutors>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListTutorsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Register yourself as a tutor
+ */
+export const getRegisterAsTutorUrl = () => {
+  return `/api/tutors`;
+};
+
+export const registerAsTutor = async (
+  registerAsTutorBody: RegisterAsTutorBody,
+  options?: RequestInit,
+): Promise<TutorEntry> => {
+  return customFetch<TutorEntry>(getRegisterAsTutorUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(registerAsTutorBody),
+  });
+};
+
+export const getRegisterAsTutorMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerAsTutor>>,
+    TError,
+    { data: BodyType<RegisterAsTutorBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof registerAsTutor>>,
+  TError,
+  { data: BodyType<RegisterAsTutorBody> },
+  TContext
+> => {
+  const mutationKey = ["registerAsTutor"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof registerAsTutor>>,
+    { data: BodyType<RegisterAsTutorBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return registerAsTutor(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RegisterAsTutorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof registerAsTutor>>
+>;
+export type RegisterAsTutorMutationBody = BodyType<RegisterAsTutorBody>;
+export type RegisterAsTutorMutationError = ErrorType<void>;
+
+/**
+ * @summary Register yourself as a tutor
+ */
+export const useRegisterAsTutor = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerAsTutor>>,
+    TError,
+    { data: BodyType<RegisterAsTutorBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof registerAsTutor>>,
+  TError,
+  { data: BodyType<RegisterAsTutorBody> },
+  TContext
+> => {
+  return useMutation(getRegisterAsTutorMutationOptions(options));
+};
+
+/**
+ * @summary Remove your own tutor listing
+ */
+export const getRemoveTutorListingUrl = () => {
+  return `/api/tutors/me`;
+};
+
+export const removeTutorListing = async (
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getRemoveTutorListingUrl(), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getRemoveTutorListingMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeTutorListing>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeTutorListing>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["removeTutorListing"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeTutorListing>>,
+    void
+  > = () => {
+    return removeTutorListing(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveTutorListingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeTutorListing>>
+>;
+
+export type RemoveTutorListingMutationError = ErrorType<void>;
+
+/**
+ * @summary Remove your own tutor listing
+ */
+export const useRemoveTutorListing = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeTutorListing>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof removeTutorListing>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getRemoveTutorListingMutationOptions(options));
 };
 
 /**

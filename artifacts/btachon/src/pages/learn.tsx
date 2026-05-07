@@ -12,8 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { BookOpen, Video, Users, UserPlus, MicOff, PhoneOff, Users2, Sparkles, MapPin, Globe, ArrowLeft, ArrowRight, GraduationCap, School, Play, Clock, Bookmark, BookmarkCheck, X } from "lucide-react";
+import { BookOpen, Video, Users, UserPlus, MicOff, PhoneOff, Users2, Sparkles, MapPin, Globe, ArrowLeft, ArrowRight, GraduationCap, School, Play, Clock, Bookmark, BookmarkCheck, X, Star } from "lucide-react";
 import { WATCH_VIDEOS, VIDEO_CATEGORIES, type WatchVideo, type VideoCategory } from "@/data/watchVideos";
+import { useListTutors, useRegisterAsTutor, useRemoveTutorListing } from "@workspace/api-client-react";
 
 
 import heroLearn from "@/assets/hero-learn.png";
@@ -72,14 +73,18 @@ export default function Learn() {
     return matchCat && matchTab;
   });
 
-  const [isTutor, setIsTutor] = useLocalStorage("availableAsTutor", false);
-  const [tutorProfile, setTutorProfile] = useLocalStorage<any>("tutorProfile", null);
-  const [tutorRequests, setTutorRequests] = useLocalStorage<any[]>("tutorRequests", []);
   const [chavrusaRequests, setChavrusaRequests] = useLocalStorage<any[]>("chavrusaRequests", []);
   const [lishmaRegistrations, setLishmaRegistrations] = useLocalStorage<any[]>("lishmaRegistrations", []);
   const [hostedSessions, setHostedSessions] = useLocalStorage<any[]>("hostedSessions", []);
   const [sessionSuggestions, setSessionSuggestions] = useLocalStorage<any[]>("sessionSuggestions", []);
-  
+
+  const { data: tutorList = [], isLoading: tutorsLoading, refetch: refetchTutors } = useListTutors();
+  const registerAsTutor = useRegisterAsTutor();
+  const removeTutorListing = useRemoveTutorListing();
+  const [becomeTutorOpen, setBecomeTutorOpen] = useState(false);
+
+  const dbTutors = tutorList as any[];
+
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [activeSession, setActiveSession] = useState<any>(null);
   const [levelFilter, setLevelFilter] = useState("All");
@@ -91,30 +96,38 @@ export default function Learn() {
 
   const handleRequestTutor = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    setTutorRequests([...tutorRequests, {
-      id: Date.now(),
-      topic: formData.get("topic") as string,
-      level: formData.get("level") as string,
-      time: formData.get("time") as string,
-      language: formData.get("language") as string,
-    }]);
-    toast.success("Tutor requested successfully", { description: "We'll notify you when someone accepts." });
+    toast.success("Request noted!", { description: "We'll match you with an available tutor soon." });
+    (e.target as HTMLFormElement).reset();
     document.getElementById("close-request-tutor")?.click();
   };
 
-  const handleBecomeTutor = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleBecomeTutor = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    setTutorProfile({
-      subjects: formData.get("subjects") as string,
-      languages: formData.get("languages") as string,
-      availability: formData.get("availability") as string,
-      bio: formData.get("bio") as string,
-    });
-    setIsTutor(true);
-    toast.success("Tutor profile updated", { description: "You are now listed as an available tutor." });
-    document.getElementById("close-become-tutor")?.click();
+    try {
+      await registerAsTutor.mutateAsync({ data: {
+        displayName: formData.get("displayName") as string,
+        subjects: formData.get("subjects") as string,
+        languages: formData.get("languages") as string,
+        availability: formData.get("availability") as string,
+        bio: (formData.get("bio") as string) || null,
+      }});
+      toast.success("You're listed as a tutor!", { description: "Other users can now find and contact you." });
+      setBecomeTutorOpen(false);
+      refetchTutors();
+    } catch {
+      toast.error("Could not save tutor profile");
+    }
+  };
+
+  const handleRemoveTutorListing = async () => {
+    try {
+      await removeTutorListing.mutateAsync();
+      toast.success("Listing removed");
+      refetchTutors();
+    } catch {
+      toast.error("Could not remove listing");
+    }
   };
 
   const handleRequestChavrusa = (e: React.FormEvent<HTMLFormElement>, tutorId: string) => {
@@ -320,120 +333,139 @@ export default function Learn() {
                     <Sparkles className="w-32 h-32 text-primary" />
                   </div>
                   <h3 className="text-2xl font-bold mb-2">Share Your Knowledge</h3>
-                  <p className="text-muted-foreground mb-8">One of the highest forms of Avodah is teaching others. Become a tutor.</p>
+                  <p className="text-muted-foreground mb-8">One of the highest forms of Avodah is teaching others. List yourself as a tutor.</p>
                   <div className="mt-auto">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="lg" variant={isTutor ? "outline" : "secondary"} className="w-full text-lg h-14">
-                          {isTutor ? "You're listed as a tutor (Edit)" : "Become a Tutor"}
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-[425px]">
-                        <DialogHeader>
-                          <DialogTitle>Tutor Profile</DialogTitle>
-                          <DialogDescription>List your availability and expertise.</DialogDescription>
-                        </DialogHeader>
-                        <form onSubmit={handleBecomeTutor} className="space-y-4 pt-4">
-                          <div className="space-y-2">
-                            <Label>Subjects you can teach</Label>
-                            <Input name="subjects" defaultValue={tutorProfile?.subjects} required placeholder="e.g. Chumash, Halacha..." />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Languages spoken</Label>
-                            <Input name="languages" defaultValue={tutorProfile?.languages} required placeholder="e.g. English, Yiddish..." />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Availability</Label>
-                            <Input name="availability" defaultValue={tutorProfile?.availability} required placeholder="e.g. Monday nights, Weekends..." />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Short Bio</Label>
-                            <Textarea name="bio" defaultValue={tutorProfile?.bio} required placeholder="A brief intro about your learning background..." />
-                          </div>
-                          <DialogFooter className="pt-4">
-                            <Button type="button" variant="outline" id="close-become-tutor">Cancel</Button>
-                            <Button type="submit">Save Profile</Button>
-                          </DialogFooter>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
+                    <Button size="lg" variant="secondary" className="w-full text-lg h-14" onClick={() => setBecomeTutorOpen(true)}>
+                      Become a Tutor
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {isTutor && tutorRequests.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold tracking-tight">Open Tutor Requests</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {tutorRequests.map((req) => (
-                    <Card key={req.id} className="border-border bg-card">
-                      <CardContent className="p-5">
-                        <div className="flex justify-between items-start mb-3">
-                          <Badge variant="secondary">{req.level}</Badge>
-                          <span className="text-xs text-muted-foreground font-medium">{req.language}</span>
-                        </div>
-                        <h4 className="font-bold text-lg mb-1">{req.topic}</h4>
-                        <p className="text-sm text-muted-foreground mb-4">{req.time}</p>
-                        <Button className="w-full" size="sm" onClick={() => {
-                          toast.success("Offer sent!", { description: "The learner will be notified." });
-                          setTutorRequests(tutorRequests.filter(r => r.id !== req.id));
-                        }}>
-                          Offer to Teach
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Become a Tutor dialog */}
+            <Dialog open={becomeTutorOpen} onOpenChange={setBecomeTutorOpen}>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Tutor Profile</DialogTitle>
+                  <DialogDescription>List your availability and expertise so others can find you.</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleBecomeTutor} className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label>Your Name / Display Name</Label>
+                    <Input name="displayName" required placeholder="e.g. Yosef Goldberg" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Subjects you can teach</Label>
+                    <Input name="subjects" required placeholder="e.g. Chumash, Halacha, Gemara..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Languages spoken</Label>
+                    <Input name="languages" required placeholder="e.g. English, Yiddish, Hebrew..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Availability</Label>
+                    <Input name="availability" required placeholder="e.g. Monday nights, Sundays 9am..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Short Bio <span className="text-muted-foreground">(optional)</span></Label>
+                    <Textarea name="bio" placeholder="A brief intro about your learning background..." className="resize-none" rows={3} />
+                  </div>
+                  <DialogFooter className="pt-2">
+                    <Button type="button" variant="outline" onClick={() => setBecomeTutorOpen(false)}>Cancel</Button>
+                    <Button type="submit" disabled={registerAsTutor.isPending}>
+                      {registerAsTutor.isPending ? "Saving..." : "List Me as a Tutor"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
 
-            <div className="space-y-6">
-              <h3 className="text-2xl font-bold tracking-tight">Tutor Directory</h3>
-              {isTutor && tutorProfile ? (
-                <Card className="border-primary/30 bg-primary/5 max-w-sm">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Your Tutor Listing</CardTitle>
-                    <CardDescription>You're listed as available to teach.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="text-sm space-y-1 text-muted-foreground">
-                    <p><span className="font-medium text-foreground">Subjects:</span> {tutorProfile.subjects}</p>
-                    <p><span className="font-medium text-foreground">Languages:</span> {tutorProfile.languages}</p>
-                    <p><span className="font-medium text-foreground">Availability:</span> {tutorProfile.availability}</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="text-center py-12 border border-dashed border-border rounded-2xl max-w-md mx-auto">
-                  <Users className="w-10 h-10 mx-auto text-muted-foreground opacity-20 mb-3" />
-                  <p className="font-bold">No tutors listed yet</p>
-                  <p className="text-sm text-muted-foreground mt-1">Be the first — list yourself as a tutor above.</p>
+            {/* Tutor Directory */}
+            <div className="space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold tracking-tight">Tutor Directory</h3>
+                <Button variant="outline" size="sm" onClick={() => setBecomeTutorOpen(true)}>
+                  <UserPlus className="w-3.5 h-3.5 mr-1.5" /> Add yourself
+                </Button>
+              </div>
+
+              {tutorsLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[1,2,3].map(i => <div key={i} className="h-44 rounded-xl bg-secondary/30 animate-pulse" />)}
                 </div>
-              )}
-              {tutorRequests.length > 0 && (
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Open Requests</p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {(Array.isArray(tutorRequests) ? tutorRequests : []).map((req: any) => (
-                      <Card key={req.id} className="border-border bg-card">
-                        <CardContent className="p-5">
-                          <div className="flex justify-between items-start mb-3">
-                            <Badge variant="secondary">{req.level}</Badge>
-                            <span className="text-xs text-muted-foreground font-medium">{req.language}</span>
+              ) : dbTutors.length === 0 ? (
+                <div className="text-center py-16 border border-dashed border-border rounded-2xl">
+                  <GraduationCap className="w-12 h-12 mx-auto text-muted-foreground opacity-10 mb-3" />
+                  <p className="font-bold text-lg">No tutors listed yet</p>
+                  <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">Be the first to offer your knowledge to the chevra.</p>
+                  <Button className="mt-5" onClick={() => setBecomeTutorOpen(true)}>
+                    <UserPlus className="w-4 h-4 mr-2" /> Become a Tutor
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {dbTutors.map((t: any, i: number) => (
+                    <motion.div key={t.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
+                      <Card className="border-border hover:border-primary/40 transition-colors shadow-sm h-full flex flex-col">
+                        <CardContent className="p-5 flex flex-col h-full">
+                          <div className="flex items-start gap-3 mb-4">
+                            {t.profileImageUrl ? (
+                              <img src={t.profileImageUrl} alt={t.displayName} className="w-11 h-11 rounded-full border border-border object-cover shrink-0" />
+                            ) : (
+                              <div className="w-11 h-11 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary shrink-0">
+                                {(t.displayName[0] || "?").toUpperCase()}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <h4 className="font-bold text-base leading-tight truncate">{t.displayName}</h4>
+                                {t.isFeatured && <Star className="w-3.5 h-3.5 text-primary fill-primary shrink-0" />}
+                              </div>
+                              {t.bio && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{t.bio}</p>}
+                            </div>
                           </div>
-                          <h4 className="font-bold text-lg mb-1">{req.topic}</h4>
-                          <p className="text-sm text-muted-foreground mb-4">{req.time}</p>
-                          {isTutor && (
-                            <Button className="w-full" size="sm" onClick={() => {
-                              toast.success("Offer sent!", { description: "The learner will be notified." });
-                              setTutorRequests((Array.isArray(tutorRequests) ? tutorRequests : []).filter((r: any) => r.id !== req.id));
-                            }}>
-                              Offer to Teach
+                          <div className="space-y-2 text-sm flex-1">
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Subjects</span>
+                              <p className="text-foreground mt-0.5">{t.subjects}</p>
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Languages</span>
+                              <p className="text-foreground mt-0.5">{t.languages}</p>
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Available</span>
+                              <p className="text-foreground mt-0.5">{t.availability}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 mt-4 pt-4 border-t border-border/50">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button size="sm" className="flex-1">Contact</Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Contact {t.displayName}</DialogTitle>
+                                  <DialogDescription>Send a message to connect for learning</DialogDescription>
+                                </DialogHeader>
+                                <form onSubmit={(e) => handleRequestChavrusa(e, t.id)} className="space-y-4 pt-4">
+                                  <Textarea name="message" required placeholder={`Hi ${t.displayName}, I'm interested in learning ${t.subjects.split(",")[0].trim()} together...`} className="resize-none" rows={4} />
+                                  <DialogFooter>
+                                    <Button id={`close-chavrusa-${t.id}`} type="button" variant="outline">Cancel</Button>
+                                    <Button type="submit">Send Message</Button>
+                                  </DialogFooter>
+                                </form>
+                              </DialogContent>
+                            </Dialog>
+                            <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-destructive" onClick={handleRemoveTutorListing}>
+                              <X className="w-4 h-4" />
                             </Button>
-                          )}
+                          </div>
                         </CardContent>
                       </Card>
-                    ))}
-                  </div>
+                    </motion.div>
+                  ))}
                 </div>
               )}
             </div>

@@ -277,6 +277,56 @@ export const CreateVideoResponse = zod.object({
 });
 
 /**
+ * @summary List all available tutors
+ */
+export const ListTutorsResponseItem = zod.object({
+  id: zod.string(),
+  userId: zod.string().nullish(),
+  displayName: zod.string(),
+  bio: zod.string().nullish(),
+  subjects: zod.string(),
+  languages: zod.string(),
+  availability: zod.string(),
+  profileImageUrl: zod.string().nullish(),
+  isAvailable: zod.boolean(),
+  isFeatured: zod.boolean(),
+  createdAt: zod.string(),
+});
+export const ListTutorsResponse = zod.array(ListTutorsResponseItem);
+
+/**
+ * @summary Register yourself as a tutor
+ */
+export const RegisterAsTutorBody = zod.object({
+  displayName: zod.string(),
+  bio: zod.string().nullish(),
+  subjects: zod.string(),
+  languages: zod.string(),
+  availability: zod.string(),
+});
+
+export const RegisterAsTutorResponse = zod.object({
+  id: zod.string(),
+  userId: zod.string().nullish(),
+  displayName: zod.string(),
+  bio: zod.string().nullish(),
+  subjects: zod.string(),
+  languages: zod.string(),
+  availability: zod.string(),
+  profileImageUrl: zod.string().nullish(),
+  isAvailable: zod.boolean(),
+  isFeatured: zod.boolean(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Remove your own tutor listing
+ */
+export const RemoveTutorListingResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
  * @summary Delete a video (admin)
  */
 export const DeleteVideoParams = zod.object({

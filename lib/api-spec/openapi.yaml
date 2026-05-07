@@ -18,6 +18,8 @@ tags:
     description: Friends and social operations
   - name: videos
     description: Video content management
+  - name: tutors
+    description: Tutor directory operations
 paths:
   /healthz:
     get:
@@ -304,6 +306,55 @@ paths:
         "401":
           description: Unauthorized
 
+  /tutors:
+    get:
+      operationId: listTutors
+      tags: [tutors]
+      summary: List all available tutors
+      responses:
+        "200":
+          description: List of tutors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TutorEntry"
+    post:
+      operationId: registerAsTutor
+      tags: [tutors]
+      summary: Register yourself as a tutor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterAsTutorBody"
+      responses:
+        "200":
+          description: Tutor profile created or updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TutorEntry"
+        "401":
+          description: Unauthorized
+
+  /tutors/me:
+    delete:
+      operationId: removeTutorListing
+      tags: [tutors]
+      summary: Remove your own tutor listing
+      responses:
+        "200":
+          description: Removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+
   /videos/{videoId}:
     delete:
       operationId: deleteVideo
@@ -564,6 +615,60 @@ components:
         - description
         - isShort
         - sortOrder
+
+    TutorEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: ["string", "null"]
+        displayName:
+          type: string
+        bio:
+          type: ["string", "null"]
+        subjects:
+          type: string
+        languages:
+          type: string
+        availability:
+          type: string
+        profileImageUrl:
+          type: ["string", "null"]
+        isAvailable:
+          type: boolean
+        isFeatured:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - displayName
+        - subjects
+        - languages
+        - availability
+        - isAvailable
+        - isFeatured
+        - createdAt
+
+    RegisterAsTutorBody:
+      type: object
+      properties:
+        displayName:
+          type: string
+        bio:
+          type: ["string", "null"]
+        subjects:
+          type: string
+        languages:
+          type: string
+        availability:
+          type: string
+      required:
+        - displayName
+        - subjects
+        - languages
+        - availability
 
     CreateVideoBody:
       type: object

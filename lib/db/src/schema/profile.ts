@@ -30,5 +30,19 @@ export const friendRequestsTable = pgTable("friend_requests", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const tutorsTable = pgTable("tutors", {
+  id: varchar("id").primaryKey(),
+  userId: varchar("user_id").references(() => usersTable.id, { onDelete: "set null" }),
+  displayName: varchar("display_name").notNull(),
+  bio: text("bio"),
+  subjects: text("subjects").notNull(),
+  languages: text("languages").notNull(),
+  availability: text("availability").notNull(),
+  profileImageUrl: varchar("profile_image_url"),
+  isAvailable: boolean("is_available").notNull().default(true),
+  isFeatured: boolean("is_featured").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type UserProfile = typeof userProfilesTable.$inferSelect;
 export type UpsertUserProfile = typeof userProfilesTable.$inferInsert;

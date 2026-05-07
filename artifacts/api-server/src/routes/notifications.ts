@@ -16,10 +16,33 @@ router.get("/notifications", async (req: Request, res: Response) => {
     .orderBy(desc(notificationsTable.createdAt))
     .limit(50);
 
-  res.json(rows.map(r => ({
-    ...r,
-    createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
-  })));
+  // For tutor_accepted notifications, look up the tutor's current Zoom link
+  // so it always reflects the latest saved value, even if saved after acceptance.
+  const tutorAccepted = rows.filter(r => r.type === "tutor_accepted" && r.fromUserId);
+  const zoomMap: Record<string, string | null> = {};
+  if (tutorAccepted.length > 0) {
+    const tutorIds = [...new Set(tutorAccepted.map(r => r.fromUserId as string))];
+    const profiles = await Promise.all(
+      tutorIds.map(id => db.select().from(userProfilesTable).where(eq(userProfilesTable.userId, id)).then(r => r[0]))
+    );
+    for (const p of profiles) {
+      if (p) zoomMap[p.userId] = p.zoomLink ?? null;
+    }
+  }
+
+  res.json(rows.map(r => {
+    const base = { ...r, createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt };
+    if (r.type === "tutor_accepted" && r.fromUserId) {
+      const zoomLink = zoomMap[r.fromUserId] ?? null;
+      // Rebuild the body with the current zoom link
+      const tutorName = r.fromName ?? "Your tutor";
+      const bodyParts = [`${tutorName} accepted your request.`];
+      if (zoomLink) bodyParts.push(`Join here: ${zoomLink}`);
+      else bodyParts.push("They will be in touch with session details.");
+      return { ...base, body: bodyParts.join(" ") };
+    }
+    return base;
+  }));
 });
 
 router.post("/notifications/read-all", async (req: Request, res: Response) => {

@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, notificationsTable, userProfilesTable, usersTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import crypto from "crypto";
-import { sendTutorAcceptEmail } from "../lib/email";
+import { sendTutorAcceptEmail, sendTutorDeclineEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -132,6 +132,12 @@ router.post("/notifications/:id/decline", async (req: Request, res: Response) =>
       fromName: tutorName,
       status: "none",
     });
+
+    // Send email to requester
+    const [requesterUser] = await db.select().from(usersTable).where(eq(usersTable.id, notif.fromUserId));
+    if (requesterUser?.email) {
+      sendTutorDeclineEmail(requesterUser.email, requesterUser.firstName ?? null, tutorName).catch(() => {});
+    }
   }
 
   res.json({ success: true });

@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, learnSessionsTable, notificationsTable, userProfilesTable, usersTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import crypto from "crypto";
+import { sendTutorOfferEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -98,6 +99,18 @@ router.post("/learn-sessions/:id/respond", async (req: Request, res: Response) =
     fromName: tutorName,
     status: "none",
   });
+
+  // Send email to the student
+  const [studentUser] = await db.select().from(usersTable).where(eq(usersTable.id, session.hostUserId));
+  if (studentUser?.email) {
+    sendTutorOfferEmail(
+      studentUser.email,
+      studentUser.firstName ?? null,
+      tutorName,
+      session.title,
+      message?.trim() ?? null
+    ).catch(() => {});
+  }
 
   res.json({ success: true });
 });

@@ -1,9 +1,13 @@
 import { Resend } from "resend";
+import { logger } from "./logger";
 
 let _client: Resend | null = null;
 
 function getClient(): Resend | null {
-  if (!process.env.RESEND_API_KEY) return null;
+  if (!process.env.RESEND_API_KEY) {
+    logger.warn("RESEND_API_KEY not set — email skipped");
+    return null;
+  }
   if (!_client) _client = new Resend(process.env.RESEND_API_KEY);
   return _client;
 }
@@ -96,7 +100,7 @@ export async function sendTutorContactEmail(
       `),
     });
   } catch (err) {
-    console.error("[email] tutor contact failed:", err);
+    logger.error({ err }, "[email] tutor contact failed");
   }
 }
 
@@ -125,8 +129,68 @@ export async function sendTutorAcceptEmail(
         ${btn("Open Btachon", `${APP_URL}/notifications`)}
       `),
     });
+    logger.info({ to }, "[email] tutor accept sent");
   } catch (err) {
-    console.error("[email] tutor accept failed:", err);
+    logger.error({ err, to }, "[email] tutor accept failed");
+  }
+}
+
+// ── Tutor decline notification ──────────────────────────────────────────────────
+
+export async function sendTutorDeclineEmail(
+  to: string,
+  requesterFirstName: string | null,
+  tutorName: string
+) {
+  const client = getClient();
+  if (!client) return;
+  const name = requesterFirstName ? `, ${requesterFirstName}` : "";
+  try {
+    await client.emails.send({
+      from: FROM,
+      to,
+      subject: `Update on your learning request`,
+      html: base(`
+        ${h1(`Your request wasn't accepted${name}`)}
+        ${p(`<strong style="color:#e8d5b0;">${tutorName}</strong> isn't available right now — they may be at capacity.`)}
+        ${p("Don't be discouraged. Try reaching out to another tutor or post an open request on the Learn page.")}
+        ${btn("Find a Tutor", `${APP_URL}/learn`)}
+      `),
+    });
+    logger.info({ to }, "[email] tutor decline sent");
+  } catch (err) {
+    logger.error({ err, to }, "[email] tutor decline failed");
+  }
+}
+
+// ── Tutor responds to open learning request ────────────────────────────────────
+
+export async function sendTutorOfferEmail(
+  to: string,
+  studentFirstName: string | null,
+  tutorName: string,
+  requestTitle: string,
+  message: string | null
+) {
+  const client = getClient();
+  if (!client) return;
+  const name = studentFirstName ? `, ${studentFirstName}` : "";
+  try {
+    await client.emails.send({
+      from: FROM,
+      to,
+      subject: `${tutorName} can help you learn!`,
+      html: base(`
+        ${h1(`A tutor wants to help${name}`)}
+        ${p(`<strong style="color:#e8d5b0;">${tutorName}</strong> saw your request for <strong style="color:#e8d5b0;">${requestTitle}</strong> and wants to connect.`)}
+        ${message ? highlight("Their message", message) : ""}
+        ${p("Open your Alerts to accept and get their Zoom link.")}
+        ${btn("View in Alerts", `${APP_URL}/notifications`)}
+      `),
+    });
+    logger.info({ to }, "[email] tutor offer sent");
+  } catch (err) {
+    logger.error({ err, to }, "[email] tutor offer failed");
   }
 }
 
@@ -156,7 +220,7 @@ export async function sendWelcomeEmail(to: string, firstName: string | null) {
       `),
     });
   } catch (err) {
-    console.error("[email] welcome failed:", err);
+    logger.error({ err, to }, "[email] welcome failed");
   }
 }
 
@@ -185,7 +249,7 @@ export async function sendChallengeEmail(
       `),
     });
   } catch (err) {
-    console.error("[email] challenge notification failed:", err);
+    logger.error({ err, to }, "[email] challenge failed");
   }
 }
 
@@ -214,6 +278,6 @@ export async function sendTehillimEmail(
       `),
     });
   } catch (err) {
-    console.error("[email] tehillim notification failed:", err);
+    logger.error({ err, to }, "[email] tehillim failed");
   }
 }

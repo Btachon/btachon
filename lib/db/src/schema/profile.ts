@@ -1,4 +1,4 @@
-import { pgTable, varchar, boolean, timestamp, text, integer } from "drizzle-orm/pg-core";
+import { pgTable, varchar, boolean, timestamp, text, integer, uniqueIndex, date } from "drizzle-orm/pg-core";
 import { usersTable } from "./auth";
 
 export const userProfilesTable = pgTable("user_profiles", {
@@ -11,9 +11,25 @@ export const userProfilesTable = pgTable("user_profiles", {
   hobbies: text("hobbies"),
   growthGoals: text("growth_goals"),
   zoomLink: varchar("zoom_link"),
+  accountabilityPartnerId: varchar("accountability_partner_id").references(() => usersTable.id, { onDelete: "set null" }),
+  growthPoints: integer("growth_points").notNull().default(0),
+  currentStreak: integer("current_streak").notNull().default(0),
+  longestStreak: integer("longest_streak").notNull().default(0),
+  lastActivityDate: date("last_activity_date"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
+
+export const growthEventsTable = pgTable("growth_events", {
+  id: varchar("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  kind: varchar("kind").notNull(),
+  dedupKey: varchar("dedup_key").notNull(),
+  points: integer("points").notNull(),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  uniqueUserKindKey: uniqueIndex("growth_events_user_kind_key_uniq").on(t.userId, t.kind, t.dedupKey),
+}));
 
 export const friendConnectionsTable = pgTable("friend_connections", {
   userId: varchar("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),

@@ -1,5 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { customFetch } from "@workspace/api-client-react";
+
+type AdminUser = {
+  id: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  isBanned: boolean;
+  bannedReason: string | null;
+  createdAt: string;
+};
 import { useTimeTracking } from "@/hooks/useTimeTracking";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings as SettingsIcon, Trash2, Moon, MapPin, Instagram, ExternalLink, MessageCircle, Mail, Users, Video } from "lucide-react";
+import { Settings as SettingsIcon, Trash2, Moon, MapPin, Instagram, ExternalLink, MessageCircle, Mail, Users, Video, Ban, ShieldCheck, RotateCcw } from "lucide-react";
 import { useShabbos } from "@/hooks/useShabbos";
 import { SHABBOS_LOCATIONS, LOCATION_REGIONS, formatTimeInTz, formatRelative } from "@/lib/shabbos";
 import { useGetProfile, useUpsertProfile } from "@workspace/api-client-react";
@@ -33,6 +44,56 @@ export default function Settings() {
 
   const { data: dbProfile } = useGetProfile();
   const upsertProfile = useUpsertProfile();
+  const amAdmin = !!(dbProfile as any)?.isAdmin;
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminFilter, setAdminFilter] = useState("");
+
+  const fetchAdminUsers = useCallback(async () => {
+    setAdminLoading(true);
+    try {
+      const data = await customFetch<AdminUser[]>("/api/admin/users", { responseType: "json" });
+      setAdminUsers(data);
+    } catch (err: any) {
+      const status = err?.status ?? err?.response?.status;
+      if (status === 403) toast.error("You're not an admin — check ADMIN_EMAILS matches your login email.");
+      else if (status === 401) toast.error("Not signed in — please log in again.");
+      else toast.error("Could not load users");
+    } finally {
+      setAdminLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (amAdmin) fetchAdminUsers();
+  }, [amAdmin, fetchAdminUsers]);
+
+  const adminAction = async (userId: string, action: "ban" | "unban" | "delete", userName: string) => {
+    const confirmText = action === "delete"
+      ? `Permanently delete ${userName}? This cannot be undone — their account, posts, and notifications will all be removed.`
+      : action === "ban"
+      ? `Ban ${userName}? They'll be locked out and their public listings deleted.`
+      : `Unban ${userName}? They'll be able to log in again.`;
+    if (!confirm(confirmText)) return;
+
+    const url = action === "delete"
+      ? `/api/admin/users/${userId}`
+      : `/api/admin/users/${userId}/${action}`;
+    try {
+      await customFetch(url, {
+        method: action === "delete" ? "DELETE" : "POST",
+        responseType: "json",
+      });
+      toast.success(
+        action === "ban" ? `${userName} banned` :
+        action === "unban" ? `${userName} unbanned` :
+        `${userName} deleted`
+      );
+      fetchAdminUsers();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Action failed");
+    }
+  };
   const [zoomLink, setZoomLink] = useState("");
   const [zoomSaved, setZoomSaved] = useState(false);
 
@@ -80,6 +141,110 @@ export default function Settings() {
       </div>
 
       <div className="p-4 md:p-8 space-y-8 max-w-4xl mx-auto">
+
+        {/* Admin Panel — only visible to admins (server-side enforced via ADMIN_EMAILS env var) */}
+        {amAdmin && (
+          <Card className="shadow-sm border-primary/30 bg-gradient-to-b from-primary/5 to-card">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-primary" />
+                  <div>
+                    <CardTitle className="text-lg">Admin Panel</CardTitle>
+                    <CardDescription>Moderate users across the platform.</CardDescription>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={fetchAdminUsers} disabled={adminLoading}>
+                  <RotateCcw className={`w-3.5 h-3.5 mr-1.5 ${adminLoading ? "animate-spin" : ""}`} />
+                  Refresh
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Input
+                placeholder="Search by name or email..."
+                value={adminFilter}
+                onChange={(e) => setAdminFilter(e.target.value)}
+                className="bg-secondary/20"
+              />
+              <div className="text-xs text-muted-foreground flex items-center justify-between border-b border-border/40 pb-2">
+                <span>{adminUsers.length} total · {adminUsers.filter(u => u.isBanned).length} banned</span>
+                <span>Banned users are locked out instantly.</span>
+              </div>
+              <div className="max-h-[420px] overflow-y-auto space-y-1.5 pr-1">
+                {adminUsers
+                  .filter(u => {
+                    if (!adminFilter.trim()) return true;
+                    const q = adminFilter.toLowerCase();
+                    return (u.email?.toLowerCase().includes(q) ||
+                            u.firstName?.toLowerCase().includes(q) ||
+                            u.lastName?.toLowerCase().includes(q));
+                  })
+                  .sort((a, b) => (a.isBanned === b.isBanned ? 0 : a.isBanned ? -1 : 1))
+                  .map(u => {
+                    const displayName = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email || "Unknown";
+                    return (
+                      <div
+                        key={u.id}
+                        className={`flex items-center justify-between gap-3 p-3 rounded-lg border ${
+                          u.isBanned ? "bg-destructive/5 border-destructive/30" : "bg-secondary/30 border-border/50"
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold truncate">{displayName}</p>
+                            {u.isBanned && (
+                              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-destructive/15 text-destructive border border-destructive/30">
+                                Banned
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">{u.email ?? "no email"}</p>
+                          {u.isBanned && u.bannedReason && (
+                            <p className="text-[11px] text-destructive/80 mt-0.5 italic">"{u.bannedReason}"</p>
+                          )}
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          {u.isBanned ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 text-xs"
+                              onClick={() => adminAction(u.id, "unban", displayName)}
+                            >
+                              <RotateCcw className="w-3 h-3 mr-1" /> Unban
+                            </Button>
+                          ) : (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => adminAction(u.id, "ban", displayName)}
+                              title="Ban user"
+                            >
+                              <Ban className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => adminAction(u.id, "delete", displayName)}
+                            title="Permanently delete user"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                {!adminLoading && adminUsers.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-6">No users found.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Profile */}
         <Card className="shadow-sm border-border">

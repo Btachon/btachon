@@ -9,6 +9,9 @@ import videosRouter from "./videos";
 import pulseRouter from "./pulse";
 import notificationsRouter from "./notifications";
 import learnSessionsRouter from "./learnSessions";
+import accountabilityRouter from "./accountability";
+import adminRouter from "./admin";
+import growthRouter from "./growth";
 
 const router: IRouter = Router();
 
@@ -22,5 +25,8 @@ router.use(videosRouter);
 router.use(pulseRouter);
 router.use(notificationsRouter);
 router.use(learnSessionsRouter);
+router.use(accountabilityRouter);
+router.use(adminRouter);
+router.use(growthRouter);
 
 export default router;

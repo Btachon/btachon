@@ -1,17 +1,19 @@
 import { useEffect, useState, useMemo } from "react";
-import { useAuth } from "@workspace/replit-auth-web";
+import { useAuth, getStoredJwt } from "@workspace/replit-auth-web";
 import { useGetProfile, getGetProfileQueryKey } from "@workspace/api-client-react";
 import { useTimeTracking } from "@/hooks/useTimeTracking";
+import { useGrowth } from "@/hooks/useGrowth";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { quotes } from "@/data/quotes";
 import { getMitzvahForDate } from "@/data/mitzvos";
 import { useShabbos } from "@/hooks/useShabbos";
 import { useHebrewDate } from "@/hooks/useHebrewDate";
+import { getLifeStage, type LifeStageId } from "@/data/lifeStages";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import {
   Clock, Flame, CheckCircle2, Circle, BookOpen,
-  TrendingUp, ChevronRight, ShieldAlert, Star
+  TrendingUp, ChevronRight, ShieldAlert, Star, Sparkles, Zap
 } from "lucide-react";
 import { toast } from "sonner";
 import dashboardHero from "@/assets/dashboard-hero.png";
@@ -19,7 +21,7 @@ import dashboardHero from "@/assets/dashboard-hero.png";
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Shabbos"];
 
 const TIER_DEFS = [
-  { name: "Zombified",  min: 0,   max: 15,  next: "Awakening", incentive: "Build a streak to rise out of the fog" },
+  { name: "Growing",    min: 0,   max: 15,  next: "Awakening", incentive: "Build a streak to keep climbing" },
   { name: "Awakening",  min: 15,  max: 25,  next: "Striving",  incentive: "25 pts unlocks weekly Pulse insights" },
   { name: "Striving",   min: 25,  max: 50,  next: "Steadfast", incentive: "50 pts earns your Connect badge" },
   { name: "Steadfast",  min: 50,  max: 100, next: "Elite",     incentive: "100 pts unlocks mentor status in Connect" },
@@ -44,8 +46,10 @@ function formatTime(totalMinutes: number) {
 export default function Dashboard() {
   const { user } = useAuth();
   const { data: profile } = useGetProfile({ query: { enabled: !!user, queryKey: getGetProfileQueryKey() } });
-  const { totalMinutes, todayMinutes, totalHoursReclaimed } = useTimeTracking();
-  const [streak] = useLocalStorage("chaiStreak", 0);
+  const { totalMinutes, todayMinutes } = useTimeTracking();
+  const { growthPoints, currentStreak, award } = useGrowth();
+  const [lifeStageId] = useLocalStorage<LifeStageId | null>("btachon:lifeStage", null);
+  const stage = getLifeStage(lifeStageId);
 
   const [quoteIndex, setQuoteIndex] = useState(0);
   useEffect(() => {
@@ -67,42 +71,47 @@ export default function Dashboard() {
   const { hebrewDate, hebrewYear, parsha } = useHebrewDate();
   const todaysMitzvah = useMemo(() => getMitzvahForDate(new Date()), []);
 
-  const tierScore = totalHoursReclaimed + (streak * 2);
+  const tierScore = growthPoints;
   const tierDef = getTierDef(tierScore);
   const progress = tierProgress(tierScore, tierDef);
+  const streak = currentStreak;
 
   const [mitzvahCompletions, setMitzvahCompletions] = useLocalStorage<{ mitzvahId: number; date: string }[]>("mitzvahCompletions", []);
   const mitzvahDoneToday = (Array.isArray(mitzvahCompletions) ? mitzvahCompletions : []).some(
     c => c.date === todayStr && c.mitzvahId === todaysMitzvah.id
   );
-  const handleMitzvahDone = () => {
+  const handleMitzvahDone = async () => {
     if (mitzvahDoneToday || isShabbos) return;
     setMitzvahCompletions(prev => [...(Array.isArray(prev) ? prev : []), { mitzvahId: todaysMitzvah.id, date: todayStr }]);
-    toast.success("Mitzvah complete.", { description: "Tizku l'mitzvos." });
+    const r = await award("daily_practice_mitzvah", `${todayStr}:${todaysMitzvah.id}`);
+    toast.success("Mitzvah complete.", { description: r?.awarded ? `+${r.awarded} growth pts. Tizku l'mitzvos.` : "Tizku l'mitzvos." });
   };
 
   const [learnedDates, setLearnedDates] = useLocalStorage<string[]>("dailyLearnDone", []);
   const learnedToday = (Array.isArray(learnedDates) ? learnedDates : []).includes(todayStr);
-  const handleLearnDone = () => {
+  const handleLearnDone = async () => {
     if (learnedToday || isShabbos) return;
     setLearnedDates(prev => [...(Array.isArray(prev) ? prev : []), todayStr]);
-    toast.success("Learning marked complete.", { description: "Torah study is equal to all." });
+    const r = await award("daily_practice_learn", todayStr);
+    toast.success("Learning marked complete.", { description: r?.awarded ? `+${r.awarded} growth pts. Torah study is equal to all.` : "Torah study is equal to all." });
   };
 
   const [geulahDates, setGeulahDates] = useLocalStorage<string[]>("dailyGeulahDone", []);
   const geulahToday = (Array.isArray(geulahDates) ? geulahDates : []).includes(todayStr);
-  const handleGeulahDone = () => {
+  const handleGeulahDone = async () => {
     if (geulahToday || isShabbos) return;
     setGeulahDates(prev => [...(Array.isArray(prev) ? prev : []), todayStr]);
-    toast.success("Geulah action complete.", { description: "Every step counts." });
+    const r = await award("daily_practice_geulah", todayStr);
+    toast.success("Geulah action complete.", { description: r?.awarded ? `+${r.awarded} growth pts.` : "Every step counts." });
   };
 
   const [chaiDates, setChaiDates] = useLocalStorage<string[]>("dailyChaiDone", []);
   const chaiToday = (Array.isArray(chaiDates) ? chaiDates : []).includes(todayStr);
-  const handleChaiDone = () => {
+  const handleChaiDone = async () => {
     if (chaiToday || isShabbos) return;
     setChaiDates(prev => [...(Array.isArray(prev) ? prev : []), todayStr]);
-    toast.success("613 Chai habits complete.", { description: "Keep building." });
+    const r = await award("daily_practice_chai", todayStr);
+    toast.success("613 Chai habits complete.", { description: r?.awarded ? `+${r.awarded} growth pts. Keep building.` : "Keep building." });
   };
 
   const hour = now.getHours();
@@ -114,21 +123,21 @@ export default function Dashboard() {
   const REMINDERS = [
     {
       label: "Learn something today",
-      sublabel: "Watch a shiur or study a source",
+      sublabel: stage ? stage.defaultHabits[2] ?? "Watch a shiur or study a source" : "Watch a shiur or study a source",
       done: learnedToday,
       onMark: handleLearnDone,
       href: "/learn",
     },
     {
       label: "613 Chai habits",
-      sublabel: "Complete your daily habit stack",
+      sublabel: stage ? stage.defaultHabits[0] ?? "Complete your daily habit stack" : "Complete your daily habit stack",
       done: chaiToday,
       onMark: handleChaiDone,
       href: "/grow",
     },
     {
       label: "Geulah action",
-      sublabel: "Take one step toward redemption",
+      sublabel: stage ? stage.geulahLens.split(".")[0] + "." : "Take one step toward redemption",
       done: geulahToday,
       onMark: handleGeulahDone,
       href: "/grow",
@@ -136,6 +145,33 @@ export default function Dashboard() {
   ];
 
   const doneCount = REMINDERS.filter(r => r.done).length;
+
+  const [progressShared, setProgressShared] = useState(false);
+  const handleShareProgress = async () => {
+    try {
+      const BASE = import.meta.env.BASE_URL as string;
+      const token = getStoredJwt();
+      const res = await fetch(`${BASE}api/accountability-partner/progress`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        credentials: "include",
+        body: JSON.stringify({ completed: doneCount, total: REMINDERS.length }),
+      });
+      if (res.ok) {
+        setProgressShared(true);
+        toast.success("Progress shared with your partner!", { description: "They'll get a notification and email." });
+      } else {
+        const b = await res.json().catch(() => ({})) as { error?: string };
+        if (b.error === "No accountability partner set") {
+          toast("No partner set yet", { description: "Go to Connect to set an accountability partner." });
+        } else {
+          toast.error("Could not share progress");
+        }
+      }
+    } catch {
+      toast.error("Could not share progress");
+    }
+  };
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)] flex flex-col">
@@ -262,7 +298,15 @@ export default function Dashboard() {
           className="space-y-2"
         >
           <div className="flex items-center justify-between mb-1">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Today's Practice</p>
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Today's Practice</p>
+              {stage && (
+                <span className="flex items-center gap-1 text-[9px] font-bold text-primary/80 bg-primary/8 border border-primary/15 px-2 py-0.5 rounded-full">
+                  <Sparkles className="w-2.5 h-2.5" />
+                  {stage.label}
+                </span>
+              )}
+            </div>
             <span className="text-[10px] font-bold text-primary">{doneCount} / {REMINDERS.length} done</span>
           </div>
 
@@ -299,6 +343,32 @@ export default function Dashboard() {
             </div>
           ))}
         </motion.div>
+
+        {/* Partner progress share */}
+        {doneCount > 0 && !progressShared && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            onClick={handleShareProgress}
+            className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-primary/20 bg-primary/5 backdrop-blur-sm cursor-pointer hover:border-primary/40 transition-all"
+          >
+            <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              <Zap className="w-4 h-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">Let your partner know</p>
+              <p className="text-xs text-muted-foreground">{doneCount}/{REMINDERS.length} practices done — share with your accountability partner</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          </motion.div>
+        )}
+        {progressShared && (
+          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-primary/20 bg-primary/5 backdrop-blur-sm">
+            <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
+            <p className="text-sm font-medium text-primary">Progress shared with your partner</p>
+          </div>
+        )}
 
         {/* Stats row */}
         <motion.div
@@ -358,9 +428,38 @@ export default function Dashboard() {
           className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm px-6 py-5"
         >
           <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-3">Thought of the Day</p>
+          {stage && (
+            <p className="text-[10px] text-primary/70 font-semibold mb-2 uppercase tracking-widest">{stage.label} focus</p>
+          )}
           <p className="text-sm leading-relaxed font-medium text-foreground">"{quote.text}"</p>
           <p className="text-xs text-muted-foreground mt-2 font-medium">— {quote.source}</p>
+          {stage && (
+            <p className="text-xs text-primary/80 mt-3 font-medium italic border-t border-border/30 pt-3">{stage.chaiWelcome}</p>
+          )}
         </motion.div>
+
+        {/* Personalize CTA — shown only when no life stage is set */}
+        {!stage && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.44 }}
+          >
+            <Link href="/grow">
+              <div className="flex items-center gap-4 rounded-2xl border border-primary/20 bg-primary/5 backdrop-blur-sm px-5 py-4 cursor-pointer hover:border-primary/40 transition-all">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-foreground">Personalize your experience</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Pick your life stage in 613 Chai to tailor your daily habits and reminders.</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              </div>
+            </Link>
+          </motion.div>
+        )}
+
 
       </div>
     </div>

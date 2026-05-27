@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { BookOpen, Video, Users, UserPlus, MicOff, PhoneOff, Users2, Sparkles, MapPin, Globe, ArrowLeft, ArrowRight, GraduationCap, School, Play, Clock, Bookmark, BookmarkCheck, X, Star } from "lucide-react";
+import { BookOpen, Video, Users, UserPlus, MicOff, PhoneOff, Users2, Sparkles, MapPin, Globe, ArrowLeft, ArrowRight, GraduationCap, School, Play, Clock, Bookmark, BookmarkCheck, X, Star, Repeat2, HandshakeIcon, Trash2, Ban } from "lucide-react";
 import { WATCH_VIDEOS, VIDEO_CATEGORIES, type WatchVideo, type VideoCategory } from "@/data/watchVideos";
 import {
   useListTutors,
@@ -26,31 +26,40 @@ import {
   getListLearnSessionsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-
+import { customFetch } from "@workspace/api-client-react";
 
 import heroLearn from "@/assets/hero-learn.png";
 import chavrusaHeader from "@/assets/chavrusa-header.png";
 import lishmaHeader from "@/assets/lishma-header.png";
 import studySessionsHeader from "@/assets/study-sessions-header.png";
 
-type Section = null | "chavrusa" | "lishma" | "study";
+type Section = null | "chavrusa" | "lishma" | "study" | "skillswap";
 
 const SECTIONS = [
   {
     id: "chavrusa" as Section,
     title: "Peer to Peer",
-    subtitle: "1:1 Tutoring",
-    description: "Connect one-on-one with a tutor or chavrusa anywhere in the world. Gemara, Halacha, Tanach, Hashkafa — any subject, any level.",
+    subtitle: "1:1 Tutoring & Chavrusa",
+    description: "Connect one-on-one with a tutor or find a chavrusa anywhere in the world. Gemara, Halacha, Tanach, Hashkafa — any subject, any level.",
     image: chavrusaHeader,
     icon: Users,
-    cta: "Find a Chavrusa",
+    cta: "Find a Tutor or Chavrusa",
+  },
+  {
+    id: "skillswap" as Section,
+    title: "Skill-Swap Lab",
+    subtitle: "Global Talent Exchange",
+    description: "Post a skill you have and a skill you want to learn. Find your match and grow together — Torah, music, languages, and more.",
+    image: lishmaHeader,
+    icon: Repeat2,
+    cta: "Enter the Marketplace",
   },
   {
     id: "lishma" as Section,
     title: "Lishma",
     subtitle: "Torah for Its Own Sake",
     description: "Open learning sessions hosted by the chevra. Register for upcoming shiurim or host your own. Learn for the love of it.",
-    image: lishmaHeader,
+    image: studySessionsHeader,
     icon: School,
     cta: "Browse Sessions",
   },
@@ -59,7 +68,7 @@ const SECTIONS = [
     title: "Study Sessions",
     subtitle: "Open Groups",
     description: "Group learning anyone can join. Tutor-led or peer-led. Perfect for asking questions in a supportive environment.",
-    image: studySessionsHeader,
+    image: heroLearn,
     icon: GraduationCap,
     cta: "Join a Session",
   },
@@ -69,7 +78,7 @@ export default function Learn() {
   const [activeSection, setActiveSection] = useState<Section>(null);
   const [watchCategory, setWatchCategory] = useState<VideoCategory | "All">("All");
   const [watchTab, setWatchTab] = useState<"clips" | "shiurim">("clips");
-  const [savedVideos, setSavedVideos] = useLocalStorage<string[]>("btachon:savedVideos", []);
+  const [savedVideos, setSavedVideos] = useLocalStorage<string[]>("savedVideos", []);
   const [playingVideo, setPlayingVideo] = useState<WatchVideo | null>(null);
 
   const toggleSave = (id: string) => {
@@ -97,7 +106,40 @@ export default function Learn() {
   const respondToSession = useRespondToLearnSession();
   const { data: myProfile } = useGetProfile();
   const myUserId = (myProfile as any)?.userId;
+  const amAdmin = !!(myProfile as any)?.isAdmin;
   const [becomeTutorOpen, setBecomeTutorOpen] = useState(false);
+
+  const handleDeleteListing = async (sessionId: string) => {
+    try {
+      await customFetch(`/api/learn-sessions/${sessionId}`, { method: "DELETE", responseType: "json" });
+      toast.success("Listing removed");
+      refetchSessions();
+    } catch (err: any) {
+      const status = err?.status ?? err?.response?.status;
+      if (status === 403) toast.error("Not allowed — only the owner or an admin can remove this.");
+      else if (status === 401) toast.error("Please sign in again.");
+      else toast.error("Could not remove listing");
+    }
+  };
+
+  const handleBanUser = async (userId: string, userName: string) => {
+    if (!confirm(`Ban ${userName}? This will lock their account and delete all their listings. You can unban from the admin panel in Settings.`)) return;
+    try {
+      await customFetch(`/api/admin/users/${userId}/ban`, {
+        method: "POST",
+        body: JSON.stringify({ reason: "Banned from marketplace" }),
+        responseType: "json",
+      });
+      toast.success(`${userName} has been banned`, { description: "Their listings have been removed." });
+      refetchSessions();
+      refetchTutors();
+    } catch (err: any) {
+      const status = err?.status ?? err?.response?.status;
+      if (status === 403) toast.error("You're not an admin — check ADMIN_EMAILS matches your login email.");
+      else if (status === 401) toast.error("Please sign in again.");
+      else toast.error(err?.message ?? "Could not ban user");
+    }
+  };
 
   const dbTutors = tutorList as any[];
 
@@ -192,6 +234,51 @@ export default function Learn() {
     toast.success(`Registered for ${session.title}`, { description: "We'll send you a reminder." });
   };
 
+  const handlePostChavrusa = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const subject = formData.get("subject") as string;
+    const level = formData.get("level") as string;
+    const schedule = formData.get("schedule") as string;
+    const bring = formData.get("bring") as string;
+    try {
+      await createLearnSession.mutateAsync({ data: {
+        type: "chavrusa",
+        title: subject,
+        description: `Schedule: ${schedule}${bring ? ` · I bring: ${bring}` : ""}`,
+        level,
+      }});
+      qc.invalidateQueries({ queryKey: getListLearnSessionsQueryKey() });
+      toast.success("Posted to the Chavrusa board!", { description: "Others can now find and connect with you." });
+      (e.target as HTMLFormElement).reset();
+      document.getElementById("close-post-chavrusa")?.click();
+    } catch {
+      toast.error("Could not post. Please try again.");
+    }
+  };
+
+  const handlePostSkillSwap = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const have = formData.get("have") as string;
+    const want = formData.get("want") as string;
+    const details = formData.get("details") as string;
+    try {
+      await createLearnSession.mutateAsync({ data: {
+        type: "skillswap",
+        title: have,
+        description: `Want to learn: ${want}${details ? ` · ${details}` : ""}`,
+        level: "All",
+      }});
+      qc.invalidateQueries({ queryKey: getListLearnSessionsQueryKey() });
+      toast.success("Listed in the Skill-Swap marketplace!", { description: "Others can now offer to swap with you." });
+      (e.target as HTMLFormElement).reset();
+      document.getElementById("close-post-skillswap")?.click();
+    } catch {
+      toast.error("Could not post. Please try again.");
+    }
+  };
+
   const handleHostSession = async (e: React.FormEvent<HTMLFormElement>, type: "lishma" | "study") => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -231,6 +318,8 @@ export default function Learn() {
   const sessions = Array.isArray(allSessions) ? (allSessions as any[]) : [];
   const lishmaSessionsAll = sessions.filter((s) => s.type === "lishma");
   const studySessionsAll = sessions.filter((s) => s.type === "study");
+  const chavrusaPartners = sessions.filter((s) => s.type === "chavrusa");
+  const skillSwapPosts = sessions.filter((s) => s.type === "skillswap");
   const filteredLishma = lishmaSessionsAll.filter(
     (s) => levelFilter === "All" || s.level === levelFilter || s.level === "All"
   );
@@ -278,7 +367,7 @@ export default function Learn() {
             className="p-4 md:p-8 max-w-5xl mx-auto space-y-6 pt-4"
           >
             <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Choose a section</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {SECTIONS.map((sec, i) => (
                 <motion.button
                   key={sec.id}
@@ -601,6 +690,356 @@ export default function Learn() {
                 </div>
               );
             })()}
+
+            {/* Chavrusa Partner Board */}
+            <div className="space-y-5">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <h3 className="text-2xl font-bold tracking-tight">Find a Chavrusa Partner</h3>
+                  <p className="text-sm text-muted-foreground">Looking for a peer learning partner? Post yourself or connect with others.</p>
+                </div>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="default" size="sm">
+                      <UserPlus className="w-3.5 h-3.5 mr-1.5" /> Post Yourself
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Looking for a Chavrusa</DialogTitle>
+                      <DialogDescription>Post your availability to find a peer learning partner.</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handlePostChavrusa} className="space-y-4 pt-4">
+                      <div className="space-y-2">
+                        <Label>Subject you want to learn</Label>
+                        <Input name="subject" required placeholder="e.g. Mishnah Berurah, Chumash, Gemara..." />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Your level</Label>
+                        <Select name="level" required defaultValue="beginner">
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="beginner">Beginner</SelectItem>
+                            <SelectItem value="intermediate">Intermediate</SelectItem>
+                            <SelectItem value="advanced">Advanced</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>When you're available</Label>
+                        <Input name="schedule" required placeholder="e.g. Sundays 9am, evenings after 9pm..." />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>What you bring <span className="text-muted-foreground">(optional)</span></Label>
+                        <Input name="bring" placeholder="e.g. Patience, strong background in Rashi..." />
+                      </div>
+                      <DialogFooter className="pt-2">
+                        <Button id="close-post-chavrusa" type="button" variant="outline">Cancel</Button>
+                        <Button type="submit" disabled={createLearnSession.isPending}>
+                          {createLearnSession.isPending ? "Posting..." : "Post to Board"}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {sessionsLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[1,2,3].map(i => <div key={i} className="h-36 rounded-xl bg-secondary/30 animate-pulse" />)}
+                </div>
+              ) : chavrusaPartners.length === 0 ? (
+                <div className="text-center py-12 border border-dashed border-border rounded-2xl">
+                  <Users2 className="w-10 h-10 mx-auto text-muted-foreground opacity-10 mb-3" />
+                  <p className="font-bold text-base">No one posted yet</p>
+                  <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">Be the first to post your availability and find a chavrusa.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {chavrusaPartners.map((p: any) => (
+                    <Card key={p.id} className="border-border shadow-sm hover:border-primary/30 transition-colors">
+                      <CardContent className="p-5">
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">
+                              {p.hostName.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="font-bold text-sm leading-tight">{p.hostName}</p>
+                              <p className="text-xs text-muted-foreground">{p.title}</p>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="text-xs shrink-0">{p.level}</Badge>
+                        </div>
+                        {p.description && (
+                          <p className="text-xs text-muted-foreground mb-4 leading-relaxed">{p.description}</p>
+                        )}
+                        {p.hostUserId === myUserId ? (
+                          <p className="text-xs text-primary font-medium">Your listing — others can see and connect with you.</p>
+                        ) : (
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button size="sm" variant="secondary" className="w-full">Connect</Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Connect with {p.hostName}</DialogTitle>
+                                <DialogDescription>They'll receive a notification in their Alerts so you can set up a time.</DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-3 pt-2">
+                                <Textarea
+                                  id={`chavrusa-msg-${p.id}`}
+                                  placeholder={`Shalom ${p.hostName}, I'm interested in learning ${p.title} together. I'm available...`}
+                                  className="resize-none"
+                                  rows={4}
+                                />
+                                <DialogFooter>
+                                  <Button id={`close-respond-chavrusa-${p.id}`} type="button" variant="outline">Cancel</Button>
+                                  <Button
+                                    onClick={() => {
+                                      const msg = (document.getElementById(`chavrusa-msg-${p.id}`) as HTMLTextAreaElement)?.value ?? "";
+                                      handleRespondToRequest(p.id, msg, `close-respond-chavrusa-${p.id}`);
+                                    }}
+                                    disabled={respondToSession.isPending}
+                                  >
+                                    {respondToSession.isPending ? "Sending..." : "Send Message"}
+                                  </Button>
+                                </DialogFooter>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* SECTION: Skill-Swap Lab */}
+        {activeSection === "skillswap" && (
+          <motion.div
+            key="skillswap"
+            initial={{ opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -24 }}
+            transition={{ duration: 0.25 }}
+            className="p-4 md:p-8 space-y-8 max-w-6xl mx-auto"
+          >
+            {/* Action card */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="border-border shadow-sm hover:border-primary/50 transition-colors overflow-hidden group">
+                <CardContent className="p-8 flex flex-col h-full relative">
+                  <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
+                    <Repeat2 className="w-32 h-32 text-primary" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2">List Your Skills</h3>
+                  <p className="text-muted-foreground mb-8">Post a skill you have and a skill you want to learn. The chevra has more to offer than you think.</p>
+                  <div className="mt-auto">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button size="lg" className="w-full text-lg h-14">Post a Skill Swap</Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle>Post a Skill Swap</DialogTitle>
+                          <DialogDescription>Tell the community what you can teach and what you'd love to learn.</DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handlePostSkillSwap} className="space-y-4 pt-4">
+                          <div className="space-y-2">
+                            <Label>Skill I have (what you can teach)</Label>
+                            <Input name="have" required placeholder="e.g. Guitar, Spoken Hebrew, Graphic Design..." />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Skill I want (what you'd like to learn)</Label>
+                            <Input name="want" required placeholder="e.g. Gemara, Coding, Cooking..." />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Additional details <span className="text-muted-foreground">(optional)</span></Label>
+                            <Textarea name="details" placeholder="e.g. Available Sundays, prefer video call, beginner level..." className="resize-none" rows={3} />
+                          </div>
+                          <DialogFooter className="pt-2">
+                            <Button id="close-post-skillswap" type="button" variant="outline">Cancel</Button>
+                            <Button type="submit" disabled={createLearnSession.isPending}>
+                              {createLearnSession.isPending ? "Posting..." : "List in Marketplace"}
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border shadow-sm bg-secondary/10 overflow-hidden">
+                <CardContent className="p-8 flex flex-col h-full">
+                  <h3 className="text-2xl font-bold mb-2">How It Works</h3>
+                  <ul className="space-y-3 text-sm text-muted-foreground mt-2">
+                    <li className="flex items-start gap-2.5">
+                      <div className="w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">1</div>
+                      <span>Post a skill you can teach and a skill you want to learn.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <div className="w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">2</div>
+                      <span>Browse the marketplace and find someone whose "have" matches your "want".</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <div className="w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">3</div>
+                      <span>Click "Swap" to send them a message. They'll see it in their Alerts.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <div className="w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">4</div>
+                      <span>Connect, set up a time, and both of you grow.</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Marketplace Board */}
+            <div className="space-y-5">
+              <div className="flex items-center justify-between border-b border-border/50 pb-4">
+                <div>
+                  <h3 className="text-2xl font-bold tracking-tight">Marketplace</h3>
+                  <p className="text-sm text-muted-foreground mt-0.5">Browse what the chevra has to offer and swap skills.</p>
+                </div>
+                {skillSwapPosts.length > 0 && (
+                  <Badge variant="secondary" className="text-sm px-3 py-1">{skillSwapPosts.length} listing{skillSwapPosts.length !== 1 ? "s" : ""}</Badge>
+                )}
+              </div>
+
+              {sessionsLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[1,2,3].map(i => <div key={i} className="h-44 rounded-xl bg-secondary/30 animate-pulse" />)}
+                </div>
+              ) : skillSwapPosts.length === 0 ? (
+                <div className="text-center py-16 border border-dashed border-border rounded-2xl">
+                  <Repeat2 className="w-12 h-12 mx-auto text-muted-foreground opacity-10 mb-3" />
+                  <p className="font-bold text-lg">No listings yet</p>
+                  <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">Be the first to post a skill swap and set the marketplace in motion.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {skillSwapPosts.map((post: any) => {
+                    const wantMatch = post.description?.match(/Want to learn:\s*([^·]+)/);
+                    const wantSkill = wantMatch ? wantMatch[1].trim() : null;
+                    const extraDetails = post.description?.replace(/Want to learn:[^·]*/, "").replace(/^·\s*/, "").trim();
+                    return (
+                      <motion.div
+                        key={post.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                      >
+                        <Card className="border-border shadow-sm hover:border-primary/30 transition-colors h-full">
+                          <CardContent className="p-5 flex flex-col h-full">
+                            <div className="flex items-center gap-2.5 mb-4">
+                              <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">
+                                {post.hostName.charAt(0)}
+                              </div>
+                              <div>
+                                <p className="font-bold text-sm">{post.hostName}</p>
+                                <p className="text-xs text-muted-foreground">Listed a swap</p>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2 mb-4 flex-1">
+                              <div className="px-3 py-2 rounded-lg bg-primary/8 border border-primary/15">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-primary mb-0.5">Can Teach</p>
+                                <p className="text-sm font-semibold text-foreground">{post.title}</p>
+                              </div>
+                              {wantSkill && (
+                                <div className="px-3 py-2 rounded-lg bg-secondary/50 border border-border/50">
+                                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5">Wants to Learn</p>
+                                  <p className="text-sm font-semibold text-foreground">{wantSkill}</p>
+                                </div>
+                              )}
+                              {extraDetails && (
+                                <p className="text-xs text-muted-foreground px-1 leading-relaxed">{extraDetails}</p>
+                              )}
+                            </div>
+
+                            {post.hostUserId === myUserId ? (
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs text-primary font-medium">Your listing — others can reach you via Alerts.</p>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleDeleteListing(post.id)}
+                                  title="Remove listing"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex gap-2">
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button size="sm" className="flex-1" variant="secondary">
+                                      <Repeat2 className="w-3.5 h-3.5 mr-1.5" /> Swap
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Connect with {post.hostName}</DialogTitle>
+                                      <DialogDescription>They'll receive a notification so you can arrange your swap.</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-3 pt-2">
+                                      <Textarea
+                                        id={`swap-msg-${post.id}`}
+                                        placeholder={`Shalom ${post.hostName}! I see you can teach ${post.title} — I'd love to swap with you...`}
+                                        className="resize-none"
+                                        rows={4}
+                                      />
+                                      <DialogFooter>
+                                        <Button id={`close-swap-${post.id}`} type="button" variant="outline">Cancel</Button>
+                                        <Button
+                                          onClick={() => {
+                                            const msg = (document.getElementById(`swap-msg-${post.id}`) as HTMLTextAreaElement)?.value ?? "";
+                                            handleRespondToRequest(post.id, msg, `close-swap-${post.id}`);
+                                          }}
+                                          disabled={respondToSession.isPending}
+                                        >
+                                          {respondToSession.isPending ? "Sending..." : "Send Swap Request"}
+                                        </Button>
+                                      </DialogFooter>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                                {amAdmin && (
+                                  <>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                      onClick={() => handleDeleteListing(post.id)}
+                                      title="Admin: remove listing"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                      onClick={() => handleBanUser(post.hostUserId, post.hostName)}
+                                      title="Admin: ban this user"
+                                    >
+                                      <Ban className="w-3.5 h-3.5" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
 

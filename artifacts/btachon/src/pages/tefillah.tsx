@@ -6,6 +6,8 @@ import { ScrollText, Clock, ChevronDown, ChevronUp, BookOpen, CalendarDays, Chev
 import { PRAYERS, type Prayer, type PrayerWord } from "@/data/prayers";
 import { DAILY_FOCUSES, getDailyFocus, getFocusForDate } from "@/data/dailyTefillahFocus";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useGrowth } from "@/hooks/useGrowth";
+import { toast } from "sonner";
 
 // ─── Daily Focus ──────────────────────────────────────────────────────────────
 
@@ -313,12 +315,16 @@ export default function Tefillah() {
   const [tab, setTab] = useState<Tab>("focus");
   const [selectedId, setSelectedId] = useLocalStorage<string>("btachon:tefillah:selected", PRAYERS[0].id);
   const [davenedToday, setDavenedToday] = useLocalStorage<Record<string, string>>("btachon:tefillah:davened", {});
+  const { award } = useGrowth();
 
   const today = new Date().toISOString().split("T")[0];
   const selectedPrayer = PRAYERS.find((p) => p.id === selectedId) ?? PRAYERS[0];
 
-  const markDavened = (prayerId: string) => {
+  const markDavened = async (prayerId: string) => {
+    if (davenedToday[prayerId] === today) return;
     setDavenedToday((prev) => ({ ...prev, [prayerId]: today }));
+    const r = await award("tefillah_davened", `${today}:${prayerId}`);
+    if (r?.awarded) toast.success(`+${r.awarded} growth pts`, { description: "Tefillah marked." });
   };
 
   const hasDavened = (prayerId: string) => davenedToday[prayerId] === today;
